@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "configurations": [
+        {
+            "name": "Debug ANTLR4 grammar",
+            "type": "antlr-debug",
+            "request": "launch",
+            "input": "experimental/sample1.math",
+            "grammar": "experimental/MEPParser.g4",
+            "startRule": "translation_unit",
+            "printParseTree": true,
+            "visualParseTree": true
+        }
+    ]
+}
