@@ -21,12 +21,12 @@ public class MEPParser extends Parser {
 		Whitespace=16, Newline=17;
 	public static final int
 		RULE_translation_unit = 0, RULE_expr = 1, RULE_paren_expr = 2, RULE_unary_expr = 3, 
-		RULE_lexpr = 4, RULE_rexpr = 5, RULE_binary_expr = 6, RULE_functionExpression = 7, 
+		RULE_lexpr = 4, RULE_rexpr = 5, RULE_binary_expr = 6, RULE_function = 7, 
 		RULE_number_expr = 8, RULE_binary_opt = 9;
 	private static String[] makeRuleNames() {
 		return new String[] {
 			"translation_unit", "expr", "paren_expr", "unary_expr", "lexpr", "rexpr", 
-			"binary_expr", "functionExpression", "number_expr", "binary_opt"
+			"binary_expr", "function", "number_expr", "binary_opt"
 		};
 	}
 	public static final String[] ruleNames = makeRuleNames();
@@ -133,8 +133,8 @@ public class MEPParser extends Parser {
 		public Paren_exprContext paren_expr() {
 			return getRuleContext(Paren_exprContext.class,0);
 		}
-		public FunctionExpressionContext functionExpression() {
-			return getRuleContext(FunctionExpressionContext.class,0);
+		public FunctionContext function() {
+			return getRuleContext(FunctionContext.class,0);
 		}
 		public Binary_exprContext binary_expr() {
 			return getRuleContext(Binary_exprContext.class,0);
@@ -170,7 +170,7 @@ public class MEPParser extends Parser {
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(24);
-				functionExpression();
+				function();
 				}
 				break;
 			case 3:
@@ -296,6 +296,7 @@ public class MEPParser extends Parser {
 			case Integer:
 			case Float:
 			case SciNumber:
+			case Identifier:
 				enterOuterAlt(_localctx, 3);
 				{
 				setState(39);
@@ -323,6 +324,9 @@ public class MEPParser extends Parser {
 		public Paren_exprContext paren_expr() {
 			return getRuleContext(Paren_exprContext.class,0);
 		}
+		public FunctionContext function() {
+			return getRuleContext(FunctionContext.class,0);
+		}
 		public Number_exprContext number_expr() {
 			return getRuleContext(Number_exprContext.class,0);
 		}
@@ -336,7 +340,7 @@ public class MEPParser extends Parser {
 		LexprContext _localctx = new LexprContext(_ctx, getState());
 		enterRule(_localctx, 8, RULE_lexpr);
 		try {
-			setState(46);
+			setState(47);
 			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case LeftParen:
@@ -346,12 +350,19 @@ public class MEPParser extends Parser {
 				paren_expr();
 				}
 				break;
-			case Integer:
-			case Float:
-			case SciNumber:
+			case Identifier:
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(45);
+				function();
+				}
+				break;
+			case Integer:
+			case Float:
+			case SciNumber:
+				enterOuterAlt(_localctx, 3);
+				{
+				setState(46);
 				number_expr();
 				}
 				break;
@@ -386,7 +397,7 @@ public class MEPParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(48);
+			setState(49);
 			expr();
 			}
 		}
@@ -423,11 +434,11 @@ public class MEPParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(50);
-			lexpr();
 			setState(51);
-			binary_opt();
+			lexpr();
 			setState(52);
+			binary_opt();
+			setState(53);
 			rexpr();
 			}
 		}
@@ -442,32 +453,32 @@ public class MEPParser extends Parser {
 		return _localctx;
 	}
 
-	public static class FunctionExpressionContext extends ParserRuleContext {
+	public static class FunctionContext extends ParserRuleContext {
 		public TerminalNode Identifier() { return getToken(MEPParser.Identifier, 0); }
 		public TerminalNode LeftParen() { return getToken(MEPParser.LeftParen, 0); }
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
 		}
 		public TerminalNode RightParen() { return getToken(MEPParser.RightParen, 0); }
-		public FunctionExpressionContext(ParserRuleContext parent, int invokingState) {
+		public FunctionContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
-		@Override public int getRuleIndex() { return RULE_functionExpression; }
+		@Override public int getRuleIndex() { return RULE_function; }
 	}
 
-	public final FunctionExpressionContext functionExpression() throws RecognitionException {
-		FunctionExpressionContext _localctx = new FunctionExpressionContext(_ctx, getState());
-		enterRule(_localctx, 14, RULE_functionExpression);
+	public final FunctionContext function() throws RecognitionException {
+		FunctionContext _localctx = new FunctionContext(_ctx, getState());
+		enterRule(_localctx, 14, RULE_function);
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(54);
-			match(Identifier);
 			setState(55);
-			match(LeftParen);
+			match(Identifier);
 			setState(56);
-			expr();
+			match(LeftParen);
 			setState(57);
+			expr();
+			setState(58);
 			match(RightParen);
 			}
 		}
@@ -499,7 +510,7 @@ public class MEPParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(59);
+			setState(60);
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << Integer) | (1L << Float) | (1L << SciNumber))) != 0)) ) {
 			_errHandler.recoverInline(this);
@@ -540,7 +551,7 @@ public class MEPParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(61);
+			setState(62);
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << Plus) | (1L << Minus) | (1L << Mul) | (1L << Div))) != 0)) ) {
 			_errHandler.recoverInline(this);
@@ -564,23 +575,23 @@ public class MEPParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\23B\4\2\t\2\4\3\t"+
+		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\23C\4\2\t\2\4\3\t"+
 		"\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\3"+
 		"\2\3\2\3\2\3\3\3\3\3\3\3\3\3\3\3\3\5\3 \n\3\3\4\3\4\3\4\3\4\3\5\3\5\3"+
-		"\5\3\5\3\5\3\5\3\5\5\5-\n\5\3\6\3\6\5\6\61\n\6\3\7\3\7\3\b\3\b\3\b\3\b"+
-		"\3\t\3\t\3\t\3\t\3\t\3\n\3\n\3\13\3\13\3\13\2\2\f\2\4\6\b\n\f\16\20\22"+
-		"\24\2\4\3\2\r\17\3\2\4\7\2?\2\26\3\2\2\2\4\37\3\2\2\2\6!\3\2\2\2\b,\3"+
-		"\2\2\2\n\60\3\2\2\2\f\62\3\2\2\2\16\64\3\2\2\2\208\3\2\2\2\22=\3\2\2\2"+
-		"\24?\3\2\2\2\26\27\5\4\3\2\27\30\7\2\2\3\30\3\3\2\2\2\31 \5\6\4\2\32 "+
-		"\5\20\t\2\33 \5\16\b\2\34 \5\b\5\2\35 \7\20\2\2\36 \5\22\n\2\37\31\3\2"+
-		"\2\2\37\32\3\2\2\2\37\33\3\2\2\2\37\34\3\2\2\2\37\35\3\2\2\2\37\36\3\2"+
-		"\2\2 \5\3\2\2\2!\"\7\13\2\2\"#\5\4\3\2#$\7\f\2\2$\7\3\2\2\2%&\7\4\2\2"+
-		"&-\5\4\3\2\'(\7\5\2\2(-\5\4\3\2)*\5\n\6\2*+\7\t\2\2+-\3\2\2\2,%\3\2\2"+
-		"\2,\'\3\2\2\2,)\3\2\2\2-\t\3\2\2\2.\61\5\6\4\2/\61\5\22\n\2\60.\3\2\2"+
-		"\2\60/\3\2\2\2\61\13\3\2\2\2\62\63\5\4\3\2\63\r\3\2\2\2\64\65\5\n\6\2"+
-		"\65\66\5\24\13\2\66\67\5\f\7\2\67\17\3\2\2\289\7\20\2\29:\7\13\2\2:;\5"+
-		"\4\3\2;<\7\f\2\2<\21\3\2\2\2=>\t\2\2\2>\23\3\2\2\2?@\t\3\2\2@\25\3\2\2"+
-		"\2\5\37,\60";
+		"\5\3\5\3\5\3\5\3\5\5\5-\n\5\3\6\3\6\3\6\5\6\62\n\6\3\7\3\7\3\b\3\b\3\b"+
+		"\3\b\3\t\3\t\3\t\3\t\3\t\3\n\3\n\3\13\3\13\3\13\2\2\f\2\4\6\b\n\f\16\20"+
+		"\22\24\2\4\3\2\r\17\3\2\4\7\2A\2\26\3\2\2\2\4\37\3\2\2\2\6!\3\2\2\2\b"+
+		",\3\2\2\2\n\61\3\2\2\2\f\63\3\2\2\2\16\65\3\2\2\2\209\3\2\2\2\22>\3\2"+
+		"\2\2\24@\3\2\2\2\26\27\5\4\3\2\27\30\7\2\2\3\30\3\3\2\2\2\31 \5\6\4\2"+
+		"\32 \5\20\t\2\33 \5\16\b\2\34 \5\b\5\2\35 \7\20\2\2\36 \5\22\n\2\37\31"+
+		"\3\2\2\2\37\32\3\2\2\2\37\33\3\2\2\2\37\34\3\2\2\2\37\35\3\2\2\2\37\36"+
+		"\3\2\2\2 \5\3\2\2\2!\"\7\13\2\2\"#\5\4\3\2#$\7\f\2\2$\7\3\2\2\2%&\7\4"+
+		"\2\2&-\5\4\3\2\'(\7\5\2\2(-\5\4\3\2)*\5\n\6\2*+\7\t\2\2+-\3\2\2\2,%\3"+
+		"\2\2\2,\'\3\2\2\2,)\3\2\2\2-\t\3\2\2\2.\62\5\6\4\2/\62\5\20\t\2\60\62"+
+		"\5\22\n\2\61.\3\2\2\2\61/\3\2\2\2\61\60\3\2\2\2\62\13\3\2\2\2\63\64\5"+
+		"\4\3\2\64\r\3\2\2\2\65\66\5\n\6\2\66\67\5\24\13\2\678\5\f\7\28\17\3\2"+
+		"\2\29:\7\20\2\2:;\7\13\2\2;<\5\4\3\2<=\7\f\2\2=\21\3\2\2\2>?\t\2\2\2?"+
+		"\23\3\2\2\2@A\t\3\2\2A\25\3\2\2\2\5\37,\61";
 	public static final ATN _ATN =
 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());
 	static {

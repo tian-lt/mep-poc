@@ -7,7 +7,7 @@ translation_unit
 
 expr
     : paren_expr
-    | functionExpression
+    | function
     | binary_expr
     | unary_expr
     | Identifier
@@ -22,6 +22,7 @@ unary_expr
 
 lexpr
     : paren_expr
+    | function
     | number_expr;
 
 rexpr
@@ -30,7 +31,7 @@ rexpr
 binary_expr
     : lexpr binary_opt rexpr;
 
-functionExpression
+function
     : Identifier LeftParen expr RightParen;
 
 number_expr
