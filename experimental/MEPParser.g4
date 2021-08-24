@@ -11,7 +11,7 @@ expr
     | binary_expr
     | unary_expr
     | Identifier
-    | number_expr;
+    | number;
 
 paren_expr: LeftParen expr RightParen;
 
@@ -23,7 +23,7 @@ unary_expr
 lexpr
     : paren_expr
     | function
-    | number_expr;
+    | number;
 
 rexpr
     : expr;
@@ -32,15 +32,29 @@ binary_expr
     : lexpr binary_opt rexpr;
 
 function
-    : Identifier LeftParen expr RightParen;
+    : Identifier LeftParen expr (Comma expr)* RightParen;
 
-number_expr
-    : SciNumber
+number
+    : sci_number
     | Float
     | Integer;
 
+sci_number
+    : sci_num_base E sign sci_num_exp;
+
+sign
+    : Plus
+    | Minus;
+
+sci_num_base
+    : Float | Integer;
+
+sci_num_exp
+    : Integer;
+
 binary_opt
-    : Mul
+    : Caret 
+    | Mul
     | Div
     | Plus
     | Minus;
