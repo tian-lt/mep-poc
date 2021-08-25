@@ -40,82 +40,128 @@ namespace LexGen
     {
         /*
          Regular Expression(RE) syntax rule
-          - expr ::= <character>*
-                   | <expr> <|> <expr>
-                   | <expr> <*>
-                   | <(> <expr> <)>
+          - expr ::=
+                   | <'('> <expr> <')'>
+                   | <expr> <'|'> <expr>
+                   | <expr> <'*'>
+                   | <word>
+          - word ::= <[a-zA-Z0-9_]>+
           - escape character: '\'
           - RE('\\') represents TEXT('\')
+
+         Remove the left-recursive rules and then we have below rules:
+          - expr ::=
+                   | <pexpr>
+                   | <lexpr> <'|'> <expr>
+                   | <lexpr> <'*'>
+                   | <word>
+          - lexpr ::=
+                   | <pexpr>
+                   | <word>
+          - pexpr ::= <'('> expr <')'>
+          - word ::= <[a-zA-Z0-9_]>+
          */
         public static void ParseRE(string text)
         {
-            ParseContext pc = new ParseContext();
-            int idx = 0;
-            while (idx < text.Length)
+            Expr(text, out var txtView, out var expr);
+        }
+
+        private static void Expr(StringView text, out StringView outText, out ASTNodeExpr outExpr)
+        {
+            outExpr = null;
+            PExpr(text, out var tmpText, out var pexpr);
+            if(pexpr != null)
             {
-                var c = text[idx];
-                if (c == '\\')
+                outExpr = Ensure(outExpr);
+                outExpr.ParenExpr = pexpr;
+                outText = tmpText;
+                return;
+            }
+            Word(text, out tmpText, out var word);
+            if(word != null)
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.Word = word;
+                outText = tmpText;
+                return;
+            }
+            outText = text;
+        }
+
+        private static void LExpr(StringView text, out StringView outText, out ASTNodeLExpr outExpr)
+        {
+            outExpr = null;
+            PExpr(text, out var tmpText, out var pexpr);
+            if(pexpr != null)
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.ParenExpr = pexpr;
+                outText = tmpText;
+                return;
+            }
+            Word(text, out tmpText, out var word);
+            if(word != null)
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.Word = word;
+                outText = tmpText;
+                return;
+            }
+            outText = text;
+        }
+
+        private static void PExpr(StringView text, out StringView outText, out ASTNodeParenthesizedExpr outExpr)
+        {
+            outExpr = null;
+            outText = text;
+            if(text.Length <= 0)
+            {
+                return;
+            }
+            else
+            {
+                if(text[0] == '(')
                 {
-                    pc.EscapeMark = !pc.EscapeMark;
-                    if (pc.EscapeMark)
+                    ++text.Begin;
+                    Expr(text, out var tmpText, out var expr);
+                    if(expr != null && tmpText.Length > 0 && tmpText[0] == ')')
                     {
-                        ++idx;
-                        continue;
+                        outText = tmpText;
+                        ++outText.Begin;
+                        outExpr = Ensure(outExpr);
+                        outExpr.Expr = expr;
+                        return;
                     }
                 }
+            }
+        }
 
-                if (!pc.EscapeMark)
+        private static void Word(StringView text, out StringView outText, out ASTNodeWord outWord)
+        {
+            outWord = null;
+            outText = text;
+            if(text.Length <= 0)
+            {
+                return;
+            }
+            else
+            {
+                int cursor = text.Begin;
+                while(cursor < text.End)
                 {
-                    if(!IsOperator(c))
+                    var c = text[cursor++];
+                    if(IsWord(c))
                     {
-                        // a operand
-                        pc.OutputQueue.Enqueue(new ParseContext.ParseElement
-                        {
-                            ParseElementType = ParseContext.ParseElement.PEType.NFA,
-                            Element = CreateBasicNFA(c)
-                        });
-                    }
-                    else if(!IsParenthesis(c))
-                    { // a pure operator
-                        while(pc.OperatorStack.Count > 0
-                            && pc.OperatorStack.Peek().ParseElementType != ParseContext.ParseElement.PEType.LeftParen
-                            && IsOperator(pc.OperatorStack.Peek().ParseElementType)) // TODO: compare the precedence
-                        {
-                            pc.OutputQueue.Enqueue(pc.OperatorStack.Pop());
-                        }
-                        pc.OperatorStack.Push(new ParseContext.ParseElement
-                        {
-                            ParseElementType = ParseContext.ParseElement.Char2PEType[c],
-                            Element = c
-                        });
-                    }
-                    else if(c == '(')
-                    { // a left-parenthesis
-                        pc.OperatorStack.Push(new ParseContext.ParseElement
-                        {
-                            ParseElementType = ParseContext.ParseElement.PEType.LeftParen,
-                            Element = c
-                        });
-                    }
-                    else if(c == ')')
-                    { // a right-parenthesis
-                        while(pc.OperatorStack.Peek().ParseElementType != ParseContext.ParseElement.PEType.LeftParen)
-                        {
-                            pc.OutputQueue.Enqueue(pc.OperatorStack.Pop());
-                        }
-                        pc.OperatorStack.Pop();
+                        outWord = Ensure(outWord);
+                        outWord.Word += c;
                     }
                     else
                     {
-                        throw new Exception("parser: fatal error: uncaught input character.");
+                        --cursor;
+                        break;
                     }
                 }
-                ++idx;
-            } // While Ends
-
-            while(pc.OperatorStack.Count > 0)
-            {
-                pc.OutputQueue.Enqueue(pc.OperatorStack.Pop());
+                outText.Begin = cursor;
             }
         }
 
@@ -182,6 +228,14 @@ namespace LexGen
             return r;
         }
 
+        private static bool IsWord(char c)
+        {
+            return ('a' <= c && c <= 'z')
+                || ('A' <= c && c <= 'Z')
+                || ('0' <= c && c <= '9')
+                || c == '_';
+        }
+
         private static bool IsOperator(char c)
         {
             return (c == '('
@@ -190,47 +244,87 @@ namespace LexGen
                 || c == '|');
         }
 
-        private static bool IsOperator(ParseContext.ParseElement.PEType pet)
-        {
-            return pet == ParseContext.ParseElement.PEType.LeftParen
-                || pet == ParseContext.ParseElement.PEType.RightParen
-                || pet == ParseContext.ParseElement.PEType.Star
-                || pet == ParseContext.ParseElement.PEType.Or;
-        }
-
         private static bool IsParenthesis(char c)
         {
             return c == '(' || c == ')';
         }
 
-        private class ParseContext
+        private static T Ensure<T>(T target) where T : class, new()
         {
-            public class ParseElement
+            if(target == null)
             {
-                public enum PEType
-                {
-                    NFA,
-                    LeftParen,
-                    RightParen,
-                    Star,
-                    Or
-                }
+                target = new T();
+            }
+            return target;
+        }
 
-                public PEType ParseElementType { get; set; }
-                public object Element { get; set; }
+        private class ASTNodeExpr
+        {
+            public ASTNodeWord Word { get; set; }
+            public ASTNodeParenthesizedExpr ParenExpr { get; set; }
+        }
 
-                public static readonly Dictionary<char, PEType> Char2PEType = new Dictionary<char, PEType>()
-                {
-                    {'(', PEType.LeftParen },
-                    {')', PEType.RightParen},
-                    {'*', PEType.Star},
-                    {'|', PEType.Or},
-                };
+        private class ASTNodeWord
+        {
+            public string Word { get; set; } = string.Empty;
+        }
+
+        private class ASTNodeLExpr
+        {
+            public ASTNodeWord Word { get; set; }
+            public ASTNodeParenthesizedExpr ParenExpr { get; set; }
+        }
+
+        private class ASTNodeParenthesizedExpr
+        {
+            public ASTNodeExpr Expr { get; set; } 
+        }
+
+        private class StringView
+        {
+            public StringView(string src)
+            {
+                Source = src;
+                Begin = 0;
+                End = src.Length;
             }
 
-            public bool EscapeMark { get; set; } = false;
-            public Queue<ParseElement> OutputQueue = new Queue<ParseElement>();   // Shunting-Yard - Output Queue
-            public Stack<ParseElement> OperatorStack = new Stack<ParseElement>(); // Shunting-Yard - Operator Stack
+            public StringView(string src, int beg, int end)
+            {
+                Source = src;
+                Begin = beg;
+                End = end;
+            }
+
+            public int Begin { get; set; }
+            public int End { get; set; }
+            public string Source { get; set; }
+
+            public int Length { get => End - Begin; }
+
+            public char this [int key] => Source[key + Begin];
+            public static implicit operator StringView(string src) => new StringView(src);
+        }
+
+        private class ParseContext
+        {
+            public string Text { get; set; }
+            public char Symbol { get; set; } = (char)0;
+            public bool EOT { get; set; } = false;
+            public int Cursor { get; set; } = -1;
+
+            public void NextSymbol()
+            {
+                ++Cursor;
+                if(Cursor < Text.Length)
+                {
+                    Symbol = Text[Cursor];
+                }
+                else
+                {
+                    EOT = true;
+                }
+            }
         }
     }
 
