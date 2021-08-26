@@ -53,8 +53,7 @@ namespace LexGen
 
          Remove the left-recursive rules and then we have below rules:
           - expr ::=
-                     <pexpr>
-                   | <repeat_expr>
+                     <repeat_expr>
                    | <and_expr>
                    | <or_expr>
                    | <word>
@@ -73,20 +72,14 @@ namespace LexGen
         public static void ParseRE(string text)
         {
             Expr(text, out var txtView, out var expr);
+            Debug.Assert(txtView.Length == 0);
         }
 
         private static bool Expr(StringView text, out StringView outText, out ASTNodeExpr outExpr)
         {
             outExpr = null;
             outText = text.Clone();
-            if(PExpr(outText, out var tmpText, out var pexpr))
-            {
-                outExpr = Ensure(outExpr);
-                outExpr.ParenExpr = pexpr;
-                outText = tmpText;
-                return true;
-            }
-            if(RepeatExpr(outText, out tmpText, out var rexpr))
+            if(RepeatExpr(outText, out var tmpText, out var rexpr))
             {
                 outExpr = Ensure(outExpr);
                 outExpr.RepeatExpr = rexpr;
