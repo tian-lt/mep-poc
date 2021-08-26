@@ -53,18 +53,17 @@ namespace LexGen
 
          Remove the left-recursive rules and then we have below rules:
           - expr ::=
-                     <repeat_expr>
-                   | <and_expr>
+                     <and_expr>
                    | <or_expr>
+          - and_expr ::= <lexpr> <expr>?
+          - or_expr ::= <lexpr> <'|'> <expr>
+          - lexpr ::=
+                     <repeat_expr>
+                   | <pexpr>
                    | <word>
           - repeat_expr ::=
                      <character>*
                    | <pexpr> <'*'>
-          - and_expr ::= <lexpr> <expr>?
-          - or_expr ::= <lexpr> <'|'> <expr>
-          - lexpr ::=
-                     <pexpr>
-                   | <word>
           - pexpr ::= <'('> expr <')'>
           - character ::= <[a-zA-Z0-9_]>
           - word ::= <character>+
@@ -79,10 +78,10 @@ namespace LexGen
         {
             outExpr = null;
             outText = text.Clone();
-            if(RepeatExpr(outText, out var tmpText, out var rexpr))
+            if(OrExpr(outText, out var tmpText, out var oexpr))
             {
                 outExpr = Ensure(outExpr);
-                outExpr.RepeatExpr = rexpr;
+                outExpr.OrExpr = oexpr;
                 outText = tmpText;
                 return true;
             }
@@ -93,41 +92,8 @@ namespace LexGen
                 outText = tmpText;
                 return true;
             }
-            if(Word(outText, out tmpText, out var word))
-            {
-                outExpr = Ensure(outExpr);
-                outExpr.Word = word;
-                outText = tmpText;
-                return true;
-            }
             return false;
         }
-
-        private static bool RepeatExpr(StringView text, out StringView outText, out ASTNodeRepeatExpr outExpr)
-        {
-            outExpr = null;
-            outText = text.Clone();
-            if(text.Length > 1)
-            {
-                if(IsCharacter(text[0]) && text[1] == '*')
-                {
-                    outExpr = Ensure(outExpr);
-                    outExpr.Character = text[0];
-                    outText.IncLeftBound(2);
-                    return true;
-                }
-            }
-            if(PExpr(outText, out var tmpText, out var pexpr)
-                && tmpText.Matches('*'))
-            {
-                outExpr = Ensure(outExpr);
-                outExpr.ParenExpr = pexpr;
-                outText = tmpText;
-                return true;
-            }
-            return false;
-        }
-
         private static bool AndExpr(StringView text, out StringView outText, out ASTNodeAndExpr outExpr)
         {
             outExpr = null;
@@ -152,6 +118,59 @@ namespace LexGen
                         return true;
                     }
                 }
+                else
+                {
+                    outExpr = Ensure(outExpr);
+                    outExpr.LeftExpr = lexpr;
+                    outText = tmpText;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool OrExpr(StringView text, out StringView outText, out ASTNodeOrExpr outExpr)
+        {
+            outExpr = null;
+            outText = text.Clone();
+            if(LExpr(text, out var tmpText, out var lexpr)
+                && tmpText.Matches('|'))
+            {
+                tmpText.IncLeftBound();
+                if (Expr(tmpText, out tmpText, out var expr))
+                {
+                    outExpr = Ensure(outExpr);
+                    outExpr.LeftExpr = lexpr;
+                    outExpr.RightExpr = expr;
+                    outText = tmpText;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool RepeatExpr(StringView text, out StringView outText, out ASTNodeRepeatExpr outExpr)
+        {
+            outExpr = null;
+            outText = text.Clone();
+            if(text.Length > 1)
+            {
+                if(IsCharacter(text[0]) && text[1] == '*')
+                {
+                    outExpr = Ensure(outExpr);
+                    outExpr.Character = text[0];
+                    outText.IncLeftBound(2);
+                    return true;
+                }
+            }
+            if(PExpr(outText, out var tmpText, out var pexpr)
+                && tmpText.Matches('*'))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.ParenExpr = pexpr;
+                outText = tmpText;
+                outText.IncLeftBound();
+                return true;
             }
             return false;
         }
@@ -160,7 +179,14 @@ namespace LexGen
         {
             outExpr = null;
             outText = text.Clone();
-            if(PExpr(outText, out var tmpText, out var pexpr))
+            if(RepeatExpr(outText, out var tmpText, out var rexpr))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.RepeatExpr = rexpr;
+                outText = tmpText;
+                return true;
+            }
+            if(PExpr(outText, out tmpText, out var pexpr))
             {
                 outExpr = Ensure(outExpr);
                 outExpr.ParenExpr = pexpr;
@@ -176,7 +202,7 @@ namespace LexGen
             }
             return false;
         }
-
+        
         private static bool PExpr(StringView text, out StringView outText, out ASTNodeParenthesizedExpr outExpr)
         {
             outExpr = null;
@@ -344,7 +370,10 @@ namespace LexGen
         }
 
         private class ASTNodeOrExpr
-        { }
+        {
+            public ASTNodeLExpr LeftExpr { get; set; }
+            public ASTNodeExpr RightExpr { get; set; }
+        }
 
         private class ASTNodeAndExpr
         {
@@ -354,8 +383,9 @@ namespace LexGen
 
         private class ASTNodeLExpr
         {
-            public ASTNodeWord Word { get; set; }
+            public ASTNodeRepeatExpr RepeatExpr { get; set; }
             public ASTNodeParenthesizedExpr ParenExpr { get; set; }
+            public ASTNodeWord Word { get; set; }
         }
 
         private class ASTNodeParenthesizedExpr
