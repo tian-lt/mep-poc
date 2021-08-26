@@ -6,7 +6,7 @@ namespace LexGen
     {
         static void Main(string[] args)
         {
-            NFAUtils.ParseRE("(cdD)abc");
+            NFAUtils.ParseRE("ab(cdD)abc");
         }
     }
 }

@@ -41,116 +41,180 @@ namespace LexGen
         /*
          Regular Expression(RE) syntax rule
           - expr ::=
-                   | <'('> <expr> <')'>
+                     <'('> <expr> <')'>
                    | <expr> <'|'> <expr>
-                   | <expr> <'*'>
+                   | (<character> | (<'('> <expr> <')'>)) <'*'>
+                   | <expr> (omitted AND) <expr>
                    | <word>
-          - word ::= <[a-zA-Z0-9_]>+
+          - character ::= <[a-zA-Z0-9_]>
+          - word ::= <character>+
           - escape character: '\'
           - RE('\\') represents TEXT('\')
 
          Remove the left-recursive rules and then we have below rules:
           - expr ::=
-                   | <pexpr>
-                   | <lexpr> <'|'> <expr>
-                   | <lexpr> <'*'>
+                     <pexpr>
+                   | <repeat_expr>
+                   | <and_expr>
+                   | <or_expr>
                    | <word>
+          - repeat_expr ::=
+                     <character>*
+                   | <pexpr> <'*'>
+          - and_expr ::= <lexpr> <expr>?
+          - or_expr ::= <lexpr> <'|'> <expr>
           - lexpr ::=
-                   | <pexpr>
+                     <pexpr>
                    | <word>
           - pexpr ::= <'('> expr <')'>
-          - word ::= <[a-zA-Z0-9_]>+
+          - character ::= <[a-zA-Z0-9_]>
+          - word ::= <character>+
          */
         public static void ParseRE(string text)
         {
             Expr(text, out var txtView, out var expr);
         }
 
-        private static void Expr(StringView text, out StringView outText, out ASTNodeExpr outExpr)
+        private static bool Expr(StringView text, out StringView outText, out ASTNodeExpr outExpr)
         {
             outExpr = null;
-            PExpr(text, out var tmpText, out var pexpr);
-            if(pexpr != null)
+            outText = text.Clone();
+            if(PExpr(outText, out var tmpText, out var pexpr))
             {
                 outExpr = Ensure(outExpr);
                 outExpr.ParenExpr = pexpr;
                 outText = tmpText;
-                return;
+                return true;
             }
-            Word(text, out tmpText, out var word);
-            if(word != null)
+            if(RepeatExpr(outText, out tmpText, out var rexpr))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.RepeatExpr = rexpr;
+                outText = tmpText;
+                return true;
+            }
+            if(AndExpr(outText, out tmpText, out var aexpr))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.AndExpr = aexpr;
+                outText = tmpText;
+                return true;
+            }
+            if(Word(outText, out tmpText, out var word))
             {
                 outExpr = Ensure(outExpr);
                 outExpr.Word = word;
                 outText = tmpText;
-                return;
+                return true;
             }
-            outText = text;
+            return false;
         }
 
-        private static void LExpr(StringView text, out StringView outText, out ASTNodeLExpr outExpr)
+        private static bool RepeatExpr(StringView text, out StringView outText, out ASTNodeRepeatExpr outExpr)
         {
             outExpr = null;
-            PExpr(text, out var tmpText, out var pexpr);
-            if(pexpr != null)
+            outText = text.Clone();
+            if(text.Length > 1)
             {
-                outExpr = Ensure(outExpr);
-                outExpr.ParenExpr = pexpr;
-                outText = tmpText;
-                return;
-            }
-            Word(text, out tmpText, out var word);
-            if(word != null)
-            {
-                outExpr = Ensure(outExpr);
-                outExpr.Word = word;
-                outText = tmpText;
-                return;
-            }
-            outText = text;
-        }
-
-        private static void PExpr(StringView text, out StringView outText, out ASTNodeParenthesizedExpr outExpr)
-        {
-            outExpr = null;
-            outText = text;
-            if(text.Length <= 0)
-            {
-                return;
-            }
-            else
-            {
-                if(text[0] == '(')
+                if(IsCharacter(text[0]) && text[1] == '*')
                 {
-                    ++text.Begin;
-                    Expr(text, out var tmpText, out var expr);
-                    if(expr != null && tmpText.Length > 0 && tmpText[0] == ')')
+                    outExpr = Ensure(outExpr);
+                    outExpr.Character = text[0];
+                    outText.IncLeftBound(2);
+                    return true;
+                }
+            }
+            if(PExpr(outText, out var tmpText, out var pexpr)
+                && tmpText.Matches('*'))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.ParenExpr = pexpr;
+                outText = tmpText;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool AndExpr(StringView text, out StringView outText, out ASTNodeAndExpr outExpr)
+        {
+            outExpr = null;
+            outText = text.Clone();
+            if(LExpr(outText, out var tmpText, out var lexpr))
+            {
+                if(tmpText.Length > 0)
+                {
+                    if(!IsExprStartingSymbol(tmpText[0]))
                     {
-                        outText = tmpText;
-                        ++outText.Begin;
                         outExpr = Ensure(outExpr);
+                        outExpr.LeftExpr = lexpr;
+                        outText = tmpText;
+                        return true;
+                    }
+                    if(Expr(tmpText, out tmpText, out var expr))
+                    {
+                        outExpr = Ensure(outExpr);
+                        outExpr.LeftExpr = lexpr;
                         outExpr.Expr = expr;
-                        return;
+                        outText = tmpText;
+                        return true;
                     }
                 }
             }
+            return false;
         }
 
-        private static void Word(StringView text, out StringView outText, out ASTNodeWord outWord)
+        private static bool LExpr(StringView text, out StringView outText, out ASTNodeLExpr outExpr)
+        {
+            outExpr = null;
+            outText = text.Clone();
+            if(PExpr(outText, out var tmpText, out var pexpr))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.ParenExpr = pexpr;
+                outText = tmpText;
+                return true;
+            }
+            if(Word(outText, out tmpText, out var word))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.Word = word;
+                outText = tmpText;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool PExpr(StringView text, out StringView outText, out ASTNodeParenthesizedExpr outExpr)
+        {
+            outExpr = null;
+            outText = text.Clone();
+            if(text.Matches('('))
+            {
+                outText.IncLeftBound();
+                if(Expr(outText, out var tmpText, out var expr)
+                    && tmpText.Matches(')'))
+                {
+                    outText = tmpText;
+                    outText.IncLeftBound();
+                    outExpr = Ensure(outExpr);
+                    outExpr.Expr = expr;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool Word(StringView text, out StringView outText, out ASTNodeWord outWord)
         {
             outWord = null;
-            outText = text;
-            if(text.Length <= 0)
+            outText = text.Clone();
+            if(text.Length > 0)
             {
-                return;
-            }
-            else
-            {
-                int cursor = text.Begin;
-                while(cursor < text.End)
+                int cursor = 0;
+                while(cursor < text.Length)
                 {
                     var c = text[cursor++];
-                    if(IsWord(c))
+                    if(IsCharacter(c))
                     {
                         outWord = Ensure(outWord);
                         outWord.Word += c;
@@ -161,8 +225,10 @@ namespace LexGen
                         break;
                     }
                 }
-                outText.Begin = cursor;
+                outText.IncLeftBound(cursor);
+                return true;
             }
+            return false;
         }
 
         /*
@@ -228,12 +294,18 @@ namespace LexGen
             return r;
         }
 
-        private static bool IsWord(char c)
+        private static bool IsCharacter(char c)
         {
             return ('a' <= c && c <= 'z')
                 || ('A' <= c && c <= 'Z')
                 || ('0' <= c && c <= '9')
                 || c == '_';
+        }
+
+        private static bool IsExprStartingSymbol(char c)
+        {
+            return IsCharacter(c)
+                || c == '(';
         }
 
         private static bool IsOperator(char c)
@@ -260,13 +332,31 @@ namespace LexGen
 
         private class ASTNodeExpr
         {
-            public ASTNodeWord Word { get; set; }
+            public ASTNodeRepeatExpr RepeatExpr { get; set; }
+            public ASTNodeAndExpr AndExpr { get; set; }
+            public ASTNodeOrExpr OrExpr { get; set; }
             public ASTNodeParenthesizedExpr ParenExpr { get; set; }
+            public ASTNodeWord Word { get; set; }
         }
 
         private class ASTNodeWord
         {
             public string Word { get; set; } = string.Empty;
+        }
+
+        private class ASTNodeRepeatExpr
+        {
+            public char Character { get; set; }
+            public ASTNodeParenthesizedExpr ParenExpr { get; set; }
+        }
+
+        private class ASTNodeOrExpr
+        { }
+
+        private class ASTNodeAndExpr
+        {
+            public ASTNodeLExpr LeftExpr { get; set; }
+            public ASTNodeExpr Expr { get; set; }
         }
 
         private class ASTNodeLExpr
@@ -282,6 +372,13 @@ namespace LexGen
 
         private class StringView
         {
+            public StringView()
+            {
+                Begin = 0;
+                End = 0;
+                Source = null;
+            }
+
             public StringView(string src)
             {
                 Source = src;
@@ -299,8 +396,40 @@ namespace LexGen
             public int Begin { get; set; }
             public int End { get; set; }
             public string Source { get; set; }
-
             public int Length { get => End - Begin; }
+
+            public StringView SubView(int beg, int end = 0)
+            {
+                var result = this.Clone();
+                result.Begin = this.Begin + beg;
+                result.End = this.End + end;
+                return result;
+            }
+
+            public StringView Clone()
+            {
+                return new StringView
+                {
+                    Source = this.Source,
+                    Begin = this.Begin,
+                    End = this.End
+                };
+            }
+            public void IncLeftBound()
+            {
+                ++Begin;
+            }
+
+            public void IncLeftBound(int count)
+            {
+                Begin += count;
+            }
+
+            public bool Matches(char c)
+            {
+                return Length > 0
+                    && this[0] == c;
+            }
 
             public char this [int key] => Source[key + Begin];
             public static implicit operator StringView(string src) => new StringView(src);
