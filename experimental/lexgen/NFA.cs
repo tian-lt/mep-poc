@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace LexGen
 {
@@ -45,9 +46,8 @@ namespace LexGen
                    | <expr> <'|'> <expr>
                    | (<character> | (<'('> <expr> <')'>)) <'*'>
                    | <expr> (omitted AND) <expr>
-                   | <word>
+                   | <character>
           - character ::= <[a-zA-Z0-9_]>
-          - word ::= <character>+
           - escape character: '\'
           - RE('\\') represents TEXT('\')
 
@@ -55,23 +55,27 @@ namespace LexGen
           - expr ::=
                      <and_expr>
                    | <or_expr>
-          - and_expr ::= <lexpr> <expr>?
+                   | <lexpr>
+          - and_expr ::=
+                   | <lexpr> <expr>
           - or_expr ::= <lexpr> <'|'> <expr>
           - lexpr ::=
                      <repeat_expr>
                    | <pexpr>
-                   | <word>
+                   | <character>
           - repeat_expr ::=
-                     <character>*
+                     <character> <'*'>
                    | <pexpr> <'*'>
           - pexpr ::= <'('> expr <')'>
           - character ::= <[a-zA-Z0-9_]>
-          - word ::= <character>+
          */
         public static void ParseRE(string text)
         {
             Expr(text, out var txtView, out var expr);
+#if DEBUG
+            Console.WriteLine(JsonSerializer.Serialize(expr));
             Debug.Assert(txtView.Length == 0);
+#endif
         }
 
         private static bool Expr(StringView text, out StringView outText, out ASTNodeExpr outExpr)
@@ -92,39 +96,28 @@ namespace LexGen
                 outText = tmpText;
                 return true;
             }
+            if(LExpr(outText, out tmpText, out var lexpr))
+            {
+                outExpr = Ensure(outExpr);
+                outExpr.LHSExpr = lexpr;
+                outText = tmpText;
+                return true;
+            }
             return false;
         }
         private static bool AndExpr(StringView text, out StringView outText, out ASTNodeAndExpr outExpr)
         {
             outExpr = null;
             outText = text.Clone();
-            if(LExpr(outText, out var tmpText, out var lexpr))
+            if(LExpr(outText, out var tmpText, out var lexpr)
+                && tmpText.Length > 0
+                && Expr(tmpText, out tmpText, out var expr))
             {
-                if(tmpText.Length > 0)
-                {
-                    if(!IsExprStartingSymbol(tmpText[0]))
-                    {
-                        outExpr = Ensure(outExpr);
-                        outExpr.LeftExpr = lexpr;
-                        outText = tmpText;
-                        return true;
-                    }
-                    if(Expr(tmpText, out tmpText, out var expr))
-                    {
-                        outExpr = Ensure(outExpr);
-                        outExpr.LeftExpr = lexpr;
-                        outExpr.Expr = expr;
-                        outText = tmpText;
-                        return true;
-                    }
-                }
-                else
-                {
-                    outExpr = Ensure(outExpr);
-                    outExpr.LeftExpr = lexpr;
-                    outText = tmpText;
-                    return true;
-                }
+                outExpr = Ensure(outExpr);
+                outExpr.LeftExpr = lexpr;
+                outExpr.RightExpr = expr;
+                outText = tmpText;
+                return true;
             }
             return false;
         }
@@ -193,11 +186,11 @@ namespace LexGen
                 outText = tmpText;
                 return true;
             }
-            if(Word(outText, out tmpText, out var word))
+            if(outText.Length > 0 && IsCharacter(outText[0]))
             {
                 outExpr = Ensure(outExpr);
-                outExpr.Word = word;
-                outText = tmpText;
+                outExpr.Character = outText[0];
+                outText.IncLeftBound();
                 return true;
             }
             return false;
@@ -219,33 +212,6 @@ namespace LexGen
                     outExpr.Expr = expr;
                     return true;
                 }
-            }
-            return false;
-        }
-
-        private static bool Word(StringView text, out StringView outText, out ASTNodeWord outWord)
-        {
-            outWord = null;
-            outText = text.Clone();
-            if(text.Length > 0)
-            {
-                int cursor = 0;
-                while(cursor < text.Length)
-                {
-                    var c = text[cursor++];
-                    if(IsCharacter(c))
-                    {
-                        outWord = Ensure(outWord);
-                        outWord.Word += c;
-                    }
-                    else
-                    {
-                        --cursor;
-                        break;
-                    }
-                }
-                outText.IncLeftBound(cursor);
-                return true;
             }
             return false;
         }
@@ -327,19 +293,6 @@ namespace LexGen
                 || c == '(';
         }
 
-        private static bool IsOperator(char c)
-        {
-            return (c == '('
-                || c == ')'
-                || c == '*'
-                || c == '|');
-        }
-
-        private static bool IsParenthesis(char c)
-        {
-            return c == '(' || c == ')';
-        }
-
         private static T Ensure<T>(T target) where T : class, new()
         {
             if(target == null)
@@ -351,21 +304,18 @@ namespace LexGen
 
         private class ASTNodeExpr
         {
-            public ASTNodeRepeatExpr RepeatExpr { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
             public ASTNodeAndExpr AndExpr { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
             public ASTNodeOrExpr OrExpr { get; set; }
-            public ASTNodeParenthesizedExpr ParenExpr { get; set; }
-            public ASTNodeWord Word { get; set; }
-        }
-
-        private class ASTNodeWord
-        {
-            public string Word { get; set; } = string.Empty;
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+            public ASTNodeLExpr LHSExpr { get; set; }
         }
 
         private class ASTNodeRepeatExpr
         {
-            public char Character { get; set; }
+            public char Character { get; set; } = (char)0;
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
             public ASTNodeParenthesizedExpr ParenExpr { get; set; }
         }
 
@@ -378,14 +328,18 @@ namespace LexGen
         private class ASTNodeAndExpr
         {
             public ASTNodeLExpr LeftExpr { get; set; }
-            public ASTNodeExpr Expr { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+            public ASTNodeExpr RightExpr { get; set; }
         }
 
         private class ASTNodeLExpr
         {
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
             public ASTNodeRepeatExpr RepeatExpr { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
             public ASTNodeParenthesizedExpr ParenExpr { get; set; }
-            public ASTNodeWord Word { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+            public char Character { get; set; } = (char)0;
         }
 
         private class ASTNodeParenthesizedExpr
@@ -456,51 +410,6 @@ namespace LexGen
 
             public char this [int key] => Source[key + Begin];
             public static implicit operator StringView(string src) => new StringView(src);
-        }
-
-        private class ParseContext
-        {
-            public string Text { get; set; }
-            public char Symbol { get; set; } = (char)0;
-            public bool EOT { get; set; } = false;
-            public int Cursor { get; set; } = -1;
-
-            public void NextSymbol()
-            {
-                ++Cursor;
-                if(Cursor < Text.Length)
-                {
-                    Symbol = Text[Cursor];
-                }
-                else
-                {
-                    EOT = true;
-                }
-            }
-        }
-    }
-
-    public static partial class DebugUtils
-    {
-        public static string DumpState(this NFA.State s)
-        {
-            string eages = "";
-            foreach(var n in s.NextStates)
-            {
-                string ns = $"{n.Key}->{{";
-                foreach(var e in n.Value)
-                {
-                    ns += $"{e},";
-                }
-                ns += "}";
-                eages += $"{ns},";
-            }
-            return $"s({s.StateId}, {eages})";
-        }
-
-        public static string DumpNFA(this NFA nfa)
-        {
-            return $"i={nfa.iState.DumpState()}, f={nfa.fState.DumpState()}";
         }
     }
 }
