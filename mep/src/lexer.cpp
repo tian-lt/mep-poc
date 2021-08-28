@@ -22,7 +22,14 @@ namespace mep::details {
     size_t radix10_token_lex(Token& t, const std::string_view& v) {
         std::match_results<std::string_view::const_iterator> matches;
         size_t dist = 0;
-        if (try_search(v, decimal_float, [&](auto&& m) {
+        if (try_search(v, decimal_scientific_number, [&](auto&& m) {
+                t = Token{
+                    .token_type = TokenType::DecimalScientificNumber,
+                    .payload = std::string(m.first, m.second)
+                };
+                dist = distance(m);
+            }) ||
+            try_search(v, decimal_float, [&](auto&& m) {
                 t = Token{
                     .token_type = TokenType::DecimalFloat,
                     .payload = std::string(m.first, m.second)
@@ -36,9 +43,9 @@ namespace mep::details {
                 };
                 dist = distance(m);
             })) {
-            return true;
+            return dist;
         }
-        return false;
+        return 0;
     }
 }
 

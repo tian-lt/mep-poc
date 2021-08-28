@@ -89,7 +89,7 @@ namespace mep {
         // to speed up the process of lexeme recognition
         inline const std::regex decimal_number("^[0-9]+");
         inline const std::regex decimal_float("^([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.)");
-        inline const std::regex decimal_scientific_number("^[0-9]+\\.[0-9]*e(\\+|\\-)[0-9]");
+        inline const std::regex decimal_scientific_number("^(([0-9]+)|([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.))e(\\+|-)?[0-9]+");
     }
 
     template<class _RadixT>
