@@ -23,12 +23,14 @@ target_precompile_headers(mep
     PUBLIC
         <algorithm>
         <array>
+        <cmath>
         <cassert>
+        <format>
         <regex>
         <sstream>
+        <stdexcept>
         <string>
         <string_view>
         <unordered_map>
         <vector>
-        <cmath>
 )

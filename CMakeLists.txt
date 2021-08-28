@@ -9,3 +9,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 add_subdirectory(mep)
 add_subdirectory(console)
 
+include(CTest)
+enable_testing()
+add_subdirectory(tests)
+
+
