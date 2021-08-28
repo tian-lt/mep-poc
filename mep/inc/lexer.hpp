@@ -17,14 +17,15 @@ namespace mep {
         None = 0,
         // operators
         //   binary operators
-        Plus,
-        Minus,
+        Plus, // (pre-unary operator as well)
+        Minus, // (pre-unary operator as well)
         Mult,
         Divide,
         Caret,
         Mod,
         //   unary operators (pre- and -post)
         Percent, // (post-unary operator)
+        Factorial, // (post-unary operator) 
         
         // decimal number
         DecimalInteger,

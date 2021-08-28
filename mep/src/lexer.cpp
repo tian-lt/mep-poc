@@ -12,6 +12,7 @@ namespace mep::details {
         {'%', TokenType::Percent},
         {'(', TokenType::LeftParenthesis},
         {')', TokenType::RightParenthesis},
+        {'!', TokenType::Factorial},
     };
 
     template<class _BiDiIt>

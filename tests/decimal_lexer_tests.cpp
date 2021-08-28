@@ -27,7 +27,6 @@ TEST(DecimalLexerTests, EatFloat) {
         EXPECT_EQ(std::get<std::string>(t.payload), ".333");
     }
 }
-
 TEST(DecimalLexerTests, EatScientific) {
     {
         mep::TokenStream ts("11e22");
