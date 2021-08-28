@@ -21,6 +21,8 @@ namespace mep {
         Minus,
         Mult,
         Divide,
+        Caret,
+        Mod,
         //   unary operators (pre- and -post)
         Percent, // (post-unary operator)
         
@@ -35,7 +37,10 @@ namespace mep {
         BinaryInteger,
 
         // others
+        LeftParenthesis,
+        RightParenthesis,
         Identifier,
+        EOE, // end of expression
     };
 
     struct Token {
@@ -78,10 +83,11 @@ namespace mep {
     };
 
     namespace details {
+        size_t common_token_lex(Token& t, std::string_view& v);
         size_t radix16_token_lex(Token& t, const std::string_view& v);
         size_t radix10_token_lex(Token& t, const std::string_view& v);
-        bool radix8_token_lex(std::string_view& v);
-        bool radix2_token_lex(std::string_view& v);
+        size_t radix8_token_lex(Token& t, const std::string_view& v);
+        size_t radix2_token_lex(Token& t, const std::string_view& v);
 
         using lex_f = size_t(*)(Token&, const std::string_view&);
 
@@ -90,6 +96,8 @@ namespace mep {
         inline const std::regex decimal_number("^[0-9]+");
         inline const std::regex decimal_float("^([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.)");
         inline const std::regex decimal_scientific_number("^(([0-9]+)|([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.))e(\\+|-)?[0-9]+");
+        inline const std::regex whitespaces("^\\s+");
+        inline const std::regex identifier("^([a-zA-Z][0-9a-zA-Z]*)");
     }
 
     template<class _RadixT>
@@ -103,13 +111,17 @@ namespace mep {
 
     template<class _RadixT>
     inline Token TokenStream<_RadixT>::next() {
-        constexpr details::lex_f lex = _pick_token_lex<_RadixT>();
+        constexpr details::lex_f radix_variant_lex = _pick_token_lex<_RadixT>();
         Token t = NonToken;
         if (_view.size() > 0)
         {
-            auto offset = lex(t, _view);
-            if(offset > 0)
-            {
+            auto offset = details::common_token_lex(t, _view);
+            if (offset > 0 || t.token_type == TokenType::EOE) {
+                _view = _view.substr(offset);
+                return t;
+            }
+            offset = radix_variant_lex(t, _view);
+            if(offset > 0){
                 _view = _view.substr(offset);
                 return t;
             }
