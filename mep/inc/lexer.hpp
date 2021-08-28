@@ -1,7 +1,6 @@
 #ifndef MEP_LEXER_H
 #define MEP_LEXER_H
 
-#include <format>
 #include <functional>
 #include <memory>
 #include <regex>
@@ -50,11 +49,14 @@ namespace mep {
         std::variant<std::string> payload;
     };
     inline const Token NonToken {.token_type = TokenType::None};
+    inline bool operator==(const Token& lhs, const Token& rhs) {
+        return lhs.token_type == rhs.token_type
+            && lhs.payload == rhs.payload;
+    };
 
     struct TokenStreamError : std::runtime_error{
         TokenStreamError() noexcept : std::runtime_error("error: failed to parse token.") {}
-        TokenStreamError(int position, const std::string& msg)
-            : std::runtime_error(std::format("error: pos={0}, msg={1}.", position, msg)) {}
+        TokenStreamError(std::string&& msg) noexcept : std::runtime_error(msg) {}
         TokenStreamError(const TokenStreamError&) = delete;
         TokenStreamError(TokenStreamError&&) noexcept = default;
     };

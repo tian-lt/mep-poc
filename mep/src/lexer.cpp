@@ -38,7 +38,7 @@ namespace mep::details {
         size_t dist = 0;
         // try skip whitespaces
         if (try_search(v, whitespaces, [&](auto&& m) {
-            dist = distance(m);
+                dist = distance(m);
             })) {
             v = v.substr(dist); // skip whitespaces
             if (v.size() == 0) {
