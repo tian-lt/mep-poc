@@ -1,6 +1,7 @@
 find_package(GTest CONFIG REQUIRED)
 add_executable(meptest
     common_lexer_tests.cpp
+    common_parser_tests.cpp
     decimal_lexer_tests.cpp
 )
 

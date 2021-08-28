@@ -49,6 +49,7 @@ namespace mep {
         std::variant<std::string> payload;
     };
     inline const Token NonToken {.token_type = TokenType::None};
+    inline const Token EOEToken {.token_type = TokenType::EOE};
     inline bool operator==(const Token& lhs, const Token& rhs) {
         return lhs.token_type == rhs.token_type
             && lhs.payload == rhs.payload;
@@ -116,7 +117,7 @@ namespace mep {
     template<class _RadixT>
     inline Token TokenStream<_RadixT>::next() {
         constexpr details::lex_f radix_variant_lex = _pick_token_lex<_RadixT>();
-        Token t = NonToken;
+        Token t = EOEToken;
         if (_view.size() > 0)
         {
             auto offset = details::common_token_lex(t, _view);
@@ -131,7 +132,7 @@ namespace mep {
             }
             throw TokenStreamError();
         }
-        return t; // EOF
+        return t; // EOE
     }
 }
 

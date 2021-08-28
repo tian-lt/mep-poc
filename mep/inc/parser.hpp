@@ -52,6 +52,7 @@ namespace mep {
         struct expr_s {
             std::unique_ptr<end_term_s> end_term;
             std::unique_ptr<expr_tail_s> expr_tail;
+            bool is_empty;
         };
 
         struct expr_tail_s {
@@ -117,18 +118,18 @@ namespace mep {
 
     namespace details {
         using next_f = std::function<Token()>;
-        ast::expr_s expr(const next_f& next);
-        ast::expr_tail_s expr_tail(const next_f& next);
-        ast::end_term_s end_term(const next_f& next);
-        ast::end_term_s::options_s::o0_s end_term_o0(const Token& lat, const next_f& next);
-        ast::end_term_s::options_s::o1_s end_term_o1(const Token& lat, const next_f& next);
-        ast::end_term_s::options_s::o2_s end_term_o2(const Token& lat, const next_f& next);
-        ast::end_term_s::options_s::o3_s end_term_o3(const Token& lat, const next_f& next);
-        ast::end_term_tail_s end_term_tail(const next_f& next);
+        ast::expr_s expr(const next_f& next, Token& lat_back);
+        ast::expr_tail_s expr_tail(const Token& lat, const next_f& next, Token& lat_back);
+        ast::end_term_s end_term(const next_f& next, Token& lat_back);
+        ast::end_term_s::options_s::o0_s end_term_o0(const Token& lat, const next_f& next, Token& lat_back);
+        ast::end_term_s::options_s::o1_s end_term_o1(const Token& lat, const next_f& next, Token& lat_back);
+        ast::end_term_s::options_s::o2_s end_term_o2(const Token& lat, const next_f& next, Token& lat_back);
+        ast::end_term_s::options_s::o3_s end_term_o3(const Token& lat, const next_f& next, Token& lat_back);
+        ast::end_term_tail_s end_term_tail(const next_f& next, Token& lat_back);
         ast::binary_operator_s binary_operator(const Token& lat, const next_f& next);
         ast::pre_unary_operator_s pre_unary_operator(const Token& lat, const next_f& next);
         ast::post_unary_operator_s post_unary_operator(const Token& lat, const next_f& next);
-        ast::func_s func(const Token& lat, const next_f& next);
+        ast::func_s func(const Token& lat, const next_f& next, Token& lat_back);
         ast::num_s num(const Token& lat, const next_f& next);
 
         bool is_num_token(const Token& t);
@@ -139,6 +140,7 @@ namespace mep {
         bool is_non_token(const Token& t);
         bool is_eoe_token(const Token& t);
         bool is_leftparen_token(const Token& t);
+        bool is_rightparen_token(const Token& t);
     }
 
     struct ParserError : public std::runtime_error {
@@ -148,22 +150,16 @@ namespace mep {
         ParserError(ParserError&&) = default;
     };
 
-    template<class _RadixT>
+    template<class _RadixT = RadixDecimal>
     class Parser {
     public:
-        Parser() noexcept {}
-        Parser(const Parser&) = delete;
-        Parser(Parser&&) noexcept = default;
-    public:
-        ast::expr_s parse(TokenStream<_RadixT>&& tstr) {
+        static inline ast::expr_s parse(TokenStream<_RadixT>&& tstr) {
+            Token latback;
             return details::expr([&]() {
                 return tstr.next();
-            });
+                },
+                latback);
         }
-    private:
-    private:
-        TokenStream<_RadixT> _cur_ts;
-        Token   _cur_t;
     };
 }
 
