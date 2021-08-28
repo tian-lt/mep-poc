@@ -23,6 +23,7 @@ namespace mep {
         Divide,
         Caret,
         Mod,
+        Equals,
         //   unary operators (pre- and -post)
         Percent, // (post-unary operator)
         Factorial, // (post-unary operator) 
