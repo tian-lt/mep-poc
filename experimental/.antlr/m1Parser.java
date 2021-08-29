@@ -137,8 +137,8 @@ public class m1Parser extends Parser {
 		public SubtractionContext subtraction() {
 			return getRuleContext(SubtractionContext.class,0);
 		}
-		public FactorContext factor() {
-			return getRuleContext(FactorContext.class,0);
+		public TermContext term() {
+			return getRuleContext(TermContext.class,0);
 		}
 		public ExpressionContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -176,7 +176,7 @@ public class m1Parser extends Parser {
 				enterOuterAlt(_localctx, 4);
 				{
 				setState(41);
-				factor();
+				term();
 				}
 				break;
 			}
@@ -1037,11 +1037,11 @@ public class m1Parser extends Parser {
 		"F\3\2\2\2\16H\3\2\2\2\20M\3\2\2\2\22[\3\2\2\2\24`\3\2\2\2\26h\3\2\2\2"+
 		"\30j\3\2\2\2\32r\3\2\2\2\34t\3\2\2\2\36|\3\2\2\2 ~\3\2\2\2\"\u0087\3\2"+
 		"\2\2$\u008e\3\2\2\2&\'\5\4\3\2\'\3\3\2\2\2(-\3\2\2\2)-\5\6\4\2*-\5\b\5"+
-		"\2+-\5\24\13\2,(\3\2\2\2,)\3\2\2\2,*\3\2\2\2,+\3\2\2\2-\5\3\2\2\2./\5"+
-		"\f\7\2/\60\7\3\2\2\60\61\5\f\7\2\61\62\5\n\6\2\62\7\3\2\2\2\63\64\5\f"+
-		"\7\2\64\65\7\4\2\2\65\66\5\f\7\2\66\67\5\n\6\2\67\t\3\2\2\289\7\3\2\2"+
-		"9:\5\f\7\2:;\5\n\6\2;B\3\2\2\2<=\7\4\2\2=>\5\f\7\2>?\5\n\6\2?B\3\2\2\2"+
-		"@B\3\2\2\2A8\3\2\2\2A<\3\2\2\2A@\3\2\2\2B\13\3\2\2\2CG\5\16\b\2DG\5\20"+
+		"\2+-\5\f\7\2,(\3\2\2\2,)\3\2\2\2,*\3\2\2\2,+\3\2\2\2-\5\3\2\2\2./\5\f"+
+		"\7\2/\60\7\3\2\2\60\61\5\f\7\2\61\62\5\n\6\2\62\7\3\2\2\2\63\64\5\f\7"+
+		"\2\64\65\7\4\2\2\65\66\5\f\7\2\66\67\5\n\6\2\67\t\3\2\2\289\7\3\2\29:"+
+		"\5\f\7\2:;\5\n\6\2;B\3\2\2\2<=\7\4\2\2=>\5\f\7\2>?\5\n\6\2?B\3\2\2\2@"+
+		"B\3\2\2\2A8\3\2\2\2A<\3\2\2\2A@\3\2\2\2B\13\3\2\2\2CG\5\16\b\2DG\5\20"+
 		"\t\2EG\5\24\13\2FC\3\2\2\2FD\3\2\2\2FE\3\2\2\2G\r\3\2\2\2HI\5\24\13\2"+
 		"IJ\7\5\2\2JK\5\24\13\2KL\5\22\n\2L\17\3\2\2\2MN\5\24\13\2NO\7\6\2\2OP"+
 		"\5\24\13\2PQ\5\22\n\2Q\21\3\2\2\2RS\7\5\2\2ST\5\24\13\2TU\5\22\n\2U\\"+

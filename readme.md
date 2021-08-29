@@ -40,7 +40,7 @@ Operator precedence
 ```BNF
 <expression> ::= <addition>
                | <subtraction>
-               | <factor>
+               | <term>
 <addition> ::= <term> "+" <term> <continued_addition_or_subtraction>
 <subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
 <continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>

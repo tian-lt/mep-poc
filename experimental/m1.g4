@@ -5,7 +5,7 @@ translation_unit : expression;
 expression: 
           | addition
           | subtraction
-          | factor;
+          | term;
 addition: term Plus term continued_addition_or_subtraction;
 subtraction: term Minus term continued_addition_or_subtraction;
 continued_addition_or_subtraction: Plus term continued_addition_or_subtraction
