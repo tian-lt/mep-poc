@@ -17,7 +17,7 @@ Operators
 | **( )**  | Unary         | Parenthesis signs, which declares its inner expression to be evaluated with a higher precedence.  ***( expression )*** |
 | **+**    | Binary        | Addition sign. ***term + term = sum***                       |
 | **-**    | Binary        | Subtraction sign. ***term - term = difference***             |
-| *****    | Binary        | Multiplication sign. ***factor \* factor = product***        |
+| **\***    | Binary        | Multiplication sign. ***factor \* factor = product***        |
 | **/**    | Binary        | Division sign. ***dividend / divisor = quotient***           |
 | **^**    | Binary        | Exponentiation sign. ***base ^ exponent = power***           |
 | **mod**  | Binary        | Modulo sign. ***dividend*** **mod** ***divisor = modulus (remainder)*** |
@@ -30,7 +30,7 @@ Operator precedence
 | 2          | **+** *(unary)*, **-** *(unary)* | Left-to-right |             |
 | 3 | **^** | Left-to-right | |
 | 4         | **!**, **%** | Left-to-right |             |
-| 5 | *****, **/**, **mod** | Left-to-right | |
+| 5 | **\***, **/**, **mod** | Left-to-right | |
 | 6 | **+** *(binary)*, **-** *(binary)* | Left-to-right | |
 
 
@@ -61,10 +61,10 @@ Operator precedence
 		   | <exponentiation>
            | <atom>
 <postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
-							 | <atom> <postfix_unary_operator>
+                             | <atom> <postfix_unary_operator>
 <exponentiation> ::= <atom> "^" <atom>
 <postfix_unary_operator> ::= "!"
-						  | "%"
+                           | "%"
 <atom> ::= <parenthesized>
          | <prefix_unary_expression>
          | <function>
@@ -88,7 +88,7 @@ Operator precedence
 | subtraction                          | FIRST(term)                                                  | {"(", "+", "-", *Id*, *Digit*} |
 | continued_addition_or_subtraction    |                                                              | {"+", "-", ε}                  |
 | term                                 | FIRST(Multiplication) ∪ FIRST(Division) ∪ FIRST(factor)<br/>= FIRST(factor)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
-| continued_multiplication_or_division |                                                              | {"*", "/", ε}                  |
+| continued_multiplication_or_division |                                                              | {"\*", "/", ε}                 |
 | factor                               | FIRST(postfix_unary_expression) ∪ FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
 | postfix_unary_expression             | FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
 | exponentiation                       | FIRST(atom)                                                  | {"(", "+", "-", *Id*, *Digit*} |
