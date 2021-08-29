@@ -20,6 +20,7 @@ continued_multiplication_or_division: Mul factor continued_multiplication_or_div
                                     | Div factor continued_multiplication_or_division
                                     |;
 factor: postfix_unary_expression
+      | exponentiation
       | atom;
 postfix_unary_expression: exponentiation (Fact | Percent)
                         | atom (Fact | Percent);

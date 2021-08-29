@@ -58,25 +58,72 @@ Operator precedence
 <dividend> ::= <factor>
 <divisor> ::= <factor>
 <factor> ::= <postfix_unary_expression>
+		   | <exponentiation>
            | <atom>
 <postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
 							 | <atom> <postfix_unary_operator>
 <exponentiation> ::= <atom> "^" <atom>
-<prefix_unary_operator> ::= "!"
+<postfix_unary_operator> ::= "!"
 						  | "%"
 <atom> ::= <parenthesized>
          | <prefix_unary_expression>
          | <function>
          | <number>
+<parenthesized> ::= "(" expression ")"
 <prefix_unary_expression> ::= "+" <atom>
                             | "-" <atom>
 <function> ::= <Identifier> "(" <parameter_list> ")"
 <parameter_list> ::= <expression> <continued_parameter_list>
                    | <empty>
-<continued_parameter_list> ::= "," <expression> <continued_expression>
+<continued_parameter_list> ::= "," <expression> <continued_parameter_list>
                              | <empty>
 ```
 
+### Verifies that above grammar is LL(1) grammar
 
-### Converts into top-down parsing oriented BNF Grammar
+| FIRST(X)                             | Reduction                                                    | Results                        |
+| ------------------------------------ | ------------------------------------------------------------ | ------------------------------ |
+| expression                           | FIRST(addition)  ∪ FIRST(subtraction) ∪ FIRST(factor)<br/>=FIRST(term) ∪ FIRST(factor) | {"(", "+", "-", *Id*, *Digit*} |
+| addition                             | FIRST(term)                                                  | {"(", "+", "-", *Id*, *Digit*} |
+| subtraction                          | FIRST(term)                                                  | {"(", "+", "-", *Id*, *Digit*} |
+| continued_addition_or_subtraction    |                                                              | {"+", "-", ε}                  |
+| term                                 | FIRST(Multiplication) ∪ FIRST(Division) ∪ FIRST(factor)<br/>= FIRST(factor)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
+| continued_multiplication_or_division |                                                              | {"*", "/", ε}                  |
+| factor                               | FIRST(postfix_unary_expression) ∪ FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
+| postfix_unary_expression             | FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
+| exponentiation                       | FIRST(atom)                                                  | {"(", "+", "-", *Id*, *Digit*} |
+| atom                                 | FIRST(parenthesized) ∪ FIRST(prefix_unary_expression) ∪ FIRST(function) ∪ FIRST(number)<br/>= {"("} ∪ {"+", "-"} ∪ {*Id*} ∪ {*Digit*}<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
+| parenthesized                        |                                                              | {"("}                          |
+| prefix_unary_expression              |                                                              | {"+", "-"}                     |
+| function                             |                                                              | {Id}                           |
+| number                               |                                                              | {Digit}                        |
+| continued_parameter_list             |                                                              | {","}                          |
+| postfix_unary_operator               |                                                              | {"!", "%"}                     |
+
+
+
+| FOLLOW(X)                            |                                                              |                                                    |
+| ------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- |
+| expression                           | {")"} ∪ FIRST(continued_parameter_list)                      | {")", ",",$}                                       |
+| addition                             | FOLLOW(expression)                                           | {")", ",", $}                                      |
+| subtraction                          | FOLLOW(expression)                                           | {")", ",", $}                                      |
+| continued_addition_or_subtraction    | FOLLOW(addition) ∪ FOLLOW(subtraction) ∪ FOLLOW(term)<br/>= {")", ","} ∪ FOLLOW(term) |                                                    |
+| term                                 | {"+", "-"} ∪ FIRST(continued_addition_or_subtraction) ∪ FOLLOW(addition) ∪ FOLLOW(subtraction)<br/>={"+", "-"} ∪ {"+", "-", ε} ∪ {")", ",",$} | {")", ",","+", "-", $, ε}                          |
+| multiplication                       | FOLLOW(term)                                                 | {")", ",","+", "-", $, ε}                          |
+| division                             | FOLLOW(term)                                                 | {")", ",","+", "-", $, ε}                          |
+| continued_multiplication_or_division | FOLLOW(factor) ∪ FOLLOW(multiplication) ∪ FOLLOW(division)<br/>=FOLLOW(factor) ∪ {")", ",","+", "-", $, ε} |                                                    |
+| factor                               | {"\*", "/"} ∪ FIRST(continued_multiplication_or_division) ∪ FOLLOW(expression) ∪ FOLLOW(term) ∪ FOLLOW(multiplication) ∪ FOLLOW(division) ∪ FOLLOW(continued_multiplication_or_division)<br/>={"\*", "/"} ∪ {"\*", "/", ε} ∪ {")", ",",$} ∪ {")", ",","+", "-", $, ε} ∪ {")", ",","+", "-", $, ε} | {"\*", "/", ")", ",","+", "-", $, ε}               |
+| postfix_unary_expression             | FOLLOW(factor)                                               | {"\*", "/", ")", ",","+", "-", $, ε}               |
+| exponentiation                       | FIRST(postfix_unary_operator) ∪ FOLLOW(factor)               | {"\*", "/", ")", ",","+", "-", "!", "%", $, ε}     |
+| postfix_unary_operator               | FOLLOW(postfix_unary_expression)                             | {"\*", "/", ")", ",","+", "-", $, ε}               |
+| atom                                 | {"^"} ∪ FOLLOW(factor) ∪ FIRST(postfix_unary_expression) ∪ FOLLOW(exponentiation) ∪ FOLLOW(prefix_unary_expression) <br/>={"^"} ∪ FOLLOW(exponentiation) | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
+| parenthesized                        | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
+| prefix_unary_expression              | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
+| function                             | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
+| parameter_list                       |                                                              | {")"}                                              |
+| continued_parameter_list             | FOLLOW(parameter_list) ∪ FOLLOW(expression)                  | {")", ",",$}                                       |
+
+
+
+### 
 
