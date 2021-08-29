@@ -40,13 +40,21 @@ Operator precedence
 ```BNF
 <expression> ::= <addition>
                | <subtraction>
-               | <atom>
-<addition> ::= <term> "+" <term>
-<subtraction> ::= <term> "-" <term>
-<term> ::= <product>
-         | <quotient>
-<product> ::= <factor> "*" <factor>
-<quotient> ::= <dividend> "/" <divisor>
+               | <factor>
+<addition> ::= <term> "+" <term> <continued_addition_or_subtraction>
+<subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
+<continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>
+                                      | "-" <term> <continued_addition_or_subtraction>
+                                      | <empty>
+<term> ::= <multiplication>
+         | <division>
+         | <factor>
+<multiplication> ::= <factor> "*" <factor> <continued_multiplication_or_division>
+<division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
+<continued_multiplication_or_division> ::=
+	  "*" <factor> <continued_multiplication_or_division>
+	| "/" <divisor> <continued_multiplication_or_division>
+	| <empty>										
 <dividend> ::= <factor>
 <divisor> ::= <factor>
 <factor> ::= <postfix_unary_expression>
@@ -54,10 +62,19 @@ Operator precedence
 <postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
 							 | <atom> <postfix_unary_operator>
 <exponentiation> ::= <atom> "^" <atom>
+<prefix_unary_operator> ::= "!"
+						  | "%"
 <atom> ::= <parenthesized>
          | <prefix_unary_expression>
          | <function>
          | <number>
+<prefix_unary_expression> ::= "+" <atom>
+                            | "-" <atom>
+<function> ::= <Identifier> "(" <parameter_list> ")"
+<parameter_list> ::= <expression> <continued_parameter_list>
+                   | <empty>
+<continued_parameter_list> ::= "," <expression> <continued_expression>
+                             | <empty>
 ```
 
 
