@@ -1,136 +1,98 @@
 #ifndef MEP_PARSER_H
 #define MEP_PARSER_H
 
+#include <deque>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <variant>
 
+#include "ast.hpp"
 #include "lexer.hpp"
 
 /*
 # mep poc expression grammar specification
 
-original rules for easy understanding:
-    <expr> ::= <expr> <binary_operator> <expr>
-             | <end_term>
-    <end_term> := <end_term> <post_unary_operator>
-                | <pre_unary_operator> <end_term>
-                | <LEFT_PAREN> <expr> <RIGHT_PAREN>
-                | <func>
-                | <num>
+<expression> ::= <addition>
+               | <subtraction>
+               | <term>
+               
+<addition> ::= <term> "+" <term> <continued_addition_or_subtraction>
 
-adjusted rules for top-down parsing:
-    <expr> ::= <end_term> <expr_tail>
-    <expr_tail> ::= <binary_operator> <expr> <expr_tail>
-                  | <empty>
-    <end_term> ::= (   <pre_unary_operator> <end_term>
-                     | <LEFT_PAREN> <expr> <RIGHT_PAREN>
-                     | <func>
-                     | <num>
-                   ) <end_term_tail>
-    <end_term_tail> ::= <post_unary_operator> <end_term_tail>
-                      | <empty>
+<subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
+
+<continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>
+                                      | "-" <term> <continued_addition_or_subtraction>
+                                      | <empty>
+                                      
+<term> ::= <multiplication>
+         | <division>
+         | <factor>
+         
+<multiplication> ::= <factor> "*" <factor> <continued_multiplication_or_division>
+                   | <multiplication_sign_omitted>
+                   
+multiplication_sign_omitted ::=
+      <factor> <parenthesized> <continued_multiplication_or_division>
+   	| <factor> <function> <continued_multiplication_or_division>
+	| <parenthesized> <parenthesized> <continued_multiplication_or_division>
+   	| <function> <function> <continued_multiplication_or_division>
+
+<division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
+
+<continued_multiplication_or_division> ::=
+	  "*" <factor> <continued_multiplication_or_division>
+	| "/" <divisor> <continued_multiplication_or_division>
+	| <continued_multiplication_sign_omitted>
+	| <empty>
+    
+<continued_multiplication_sign_omitted> ::=
+	| <parenthesized> <continued_multiplication_or_division>
+	| <function> <continued_multiplication_or_division>
+    
+<dividend> ::= <factor>
+
+<divisor> ::= <factor>
+
+<factor> ::= <postfix_unary_expression>
+		   | <exponentiation>
+           | <atom>
+           
+<postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
+                             | <atom> <postfix_unary_operator>
+                             
+<exponentiation> ::= <atom> "^" <atom>
+
+<postfix_unary_operator> ::= "!"
+                           | "%"
+                           
+<atom> ::= <parenthesized>
+         | <prefix_unary_expression>
+         | <function>
+         | <number>
+         
+<parenthesized> ::= "(" expression ")"
+
+<prefix_unary_expression> ::= "+" <atom>
+                            | "-" <atom>
+                            
+<function> ::= <Identifier> "(" <parameter_list> ")"
+
+<parameter_list> ::= <expression> <continued_parameter_list>
+                   | <empty>
+                   
+<continued_parameter_list> ::= "," <expression> <continued_parameter_list>
+                             | <empty>
 */
 
 namespace mep {
-    namespace ast {
-        // forward declaration
-        struct expr_s;
-        struct expr_tail_s;
-        struct end_term_s;
-        struct end_term_tail_s;
-        struct binary_operator_s;
-        struct pre_unary_operator_s;
-        struct post_unary_operator_s;
-        struct func_s;
-        struct num_s;
-        struct empty_s;
-
-        // memory layouts
-        struct expr_s {
-            std::unique_ptr<end_term_s> end_term;
-            std::unique_ptr<expr_tail_s> expr_tail;
-            bool is_empty;
-        };
-
-        struct expr_tail_s {
-            std::unique_ptr<binary_operator_s> binary_operator;
-            std::unique_ptr<expr_s> expr;
-            std::unique_ptr<expr_tail_s> expr_tail;
-            bool is_empty;
-        };
-
-        struct end_term_s {
-            struct options_s {
-                struct o0_s {
-                    std::unique_ptr<pre_unary_operator_s> pre_unary_operator;
-                    std::unique_ptr<end_term_s> end_term;
-                };
-                struct o1_s {
-                    std::unique_ptr<expr_s> expr;
-                };
-                struct o2_s {
-                    std::unique_ptr<func_s> func;
-                };
-                struct o3_s {
-                    std::unique_ptr<num_s> num;
-                };
-                std::variant<o0_s, o1_s, o2_s, o3_s> payload;
-            } options;
-            std::unique_ptr<end_term_tail_s> end_term_tail;
-            int opid;
-        };
-
-        struct end_term_tail_s{
-            end_term_tail_s() noexcept : is_empty(false) {}
-            explicit end_term_tail_s(bool empty) noexcept : is_empty(empty) {}
-            end_term_tail_s(end_term_tail_s&&) = default;
-            end_term_tail_s(const end_term_tail_s&) = delete;
-
-            std::unique_ptr<post_unary_operator_s> post_unary_operator;
-            std::unique_ptr<end_term_tail_s> end_term_tail;
-            bool is_empty;
-        };
-
-        struct binary_operator_s {
-            Token token;
-        };
-
-        struct pre_unary_operator_s {
-            Token token;
-        };
-
-        struct post_unary_operator_s {
-            Token token;
-        };
-
-        struct func_s {
-            Token identifier;
-            std::unique_ptr<expr_s> expr;
-        };
-
-        struct num_s {
-            Token token;
-        };
-    }
 
     namespace details {
         using next_f = std::function<Token()>;
-        ast::expr_s expr(const next_f& next, Token& lat_back);
-        ast::expr_tail_s expr_tail(const Token& lat, const next_f& next, Token& lat_back);
-        ast::end_term_s end_term(const next_f& next, Token& lat_back);
-        ast::end_term_s::options_s::o0_s end_term_o0(const Token& lat, const next_f& next, Token& lat_back);
-        ast::end_term_s::options_s::o1_s end_term_o1(const Token& lat, const next_f& next, Token& lat_back);
-        ast::end_term_s::options_s::o2_s end_term_o2(const Token& lat, const next_f& next, Token& lat_back);
-        ast::end_term_s::options_s::o3_s end_term_o3(const Token& lat, const next_f& next, Token& lat_back);
-        ast::end_term_tail_s end_term_tail(const next_f& next, Token& lat_back);
-        ast::binary_operator_s binary_operator(const Token& lat, const next_f& next);
-        ast::pre_unary_operator_s pre_unary_operator(const Token& lat, const next_f& next);
-        ast::post_unary_operator_s post_unary_operator(const Token& lat, const next_f& next);
-        ast::func_s func(const Token& lat, const next_f& next, Token& lat_back);
-        ast::num_s num(const Token& lat, const next_f& next);
+        using restore_f = std::function<void(Token&&)>;
+
+        
 
         bool is_num_token(const Token& t);
         bool is_binary_operator_token(const Token& t);
@@ -153,12 +115,9 @@ namespace mep {
     template<class _RadixT = RadixDecimal>
     class Parser {
     public:
-        static inline ast::expr_s parse(TokenStream<_RadixT>&& tstr) {
-            Token latback;
-            return details::expr([&]() {
-                return tstr.next();
-                },
-                latback);
+        static inline ast::Expression parse(TokenStream<_RadixT>&& tstr) {
+            std::deque<Token> hold;
+
         }
     };
 }

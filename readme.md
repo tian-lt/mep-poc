@@ -104,7 +104,7 @@ multiplication_sign_omitted ::=
 <function> ::= <Identifier> "(" <parameter_list> ")"
 
 <parameter_list> ::= <expression> <continued_parameter_list>
-                   | <empty>
+			       | <empty>
                    
 <continued_parameter_list> ::= "," <expression> <continued_parameter_list>
                              | <empty>
