@@ -14,11 +14,20 @@ continued_addition_or_subtraction: Plus term continued_addition_or_subtraction
 term: multiplication
     | division
     | factor;
-multiplication: factor Mul factor continued_multiplication_or_division;
+multiplication: factor Mul factor continued_multiplication_or_division
+              | multiplication_sign_omitted;
+multiplication_sign_omitted:
+              | factor parenthesized continued_multiplication_or_division
+              | parenthesized parenthesized continued_multiplication_or_division
+              | factor function continued_multiplication_or_division
+              | function function continued_multiplication_or_division;
 division: factor Div factor continued_multiplication_or_division;
 continued_multiplication_or_division: Mul factor continued_multiplication_or_division
                                     | Div factor continued_multiplication_or_division
+                                    | continued_multiplication_sign_omitted
                                     |;
+continued_multiplication_sign_omitted: parenthesized continued_multiplication_or_division
+                                     | function continued_multiplication_or_division;
 factor: postfix_unary_expression
       | exponentiation
       | atom;

@@ -41,45 +41,76 @@ Operator precedence
 <expression> ::= <addition>
                | <subtraction>
                | <term>
+               
 <addition> ::= <term> "+" <term> <continued_addition_or_subtraction>
+
 <subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
+
 <continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>
                                       | "-" <term> <continued_addition_or_subtraction>
                                       | <empty>
+                                      
 <term> ::= <multiplication>
          | <division>
          | <factor>
+         
 <multiplication> ::= <factor> "*" <factor> <continued_multiplication_or_division>
+                   | <multiplication_sign_omitted>
+                   
+multiplication_sign_omitted ::=
+      <factor> <parenthesized> <continued_multiplication_or_division>
+   	| <factor> <function> <continued_multiplication_or_division>
+	| <parenthesized> <parenthesized> <continued_multiplication_or_division>
+   	| <function> <function> <continued_multiplication_or_division>
+
 <division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
+
 <continued_multiplication_or_division> ::=
 	  "*" <factor> <continued_multiplication_or_division>
 	| "/" <divisor> <continued_multiplication_or_division>
-	| <empty>										
+	| <continued_multiplication_sign_omitted>
+	| <empty>
+    
+<continued_multiplication_sign_omitted> ::=
+	| <parenthesized> <continued_multiplication_or_division>
+	| <function> <continued_multiplication_or_division>
+    
 <dividend> ::= <factor>
+
 <divisor> ::= <factor>
+
 <factor> ::= <postfix_unary_expression>
 		   | <exponentiation>
            | <atom>
+           
 <postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
                              | <atom> <postfix_unary_operator>
+                             
 <exponentiation> ::= <atom> "^" <atom>
+
 <postfix_unary_operator> ::= "!"
                            | "%"
+                           
 <atom> ::= <parenthesized>
          | <prefix_unary_expression>
          | <function>
          | <number>
+         
 <parenthesized> ::= "(" expression ")"
+
 <prefix_unary_expression> ::= "+" <atom>
                             | "-" <atom>
+                            
 <function> ::= <Identifier> "(" <parameter_list> ")"
+
 <parameter_list> ::= <expression> <continued_parameter_list>
                    | <empty>
+                   
 <continued_parameter_list> ::= "," <expression> <continued_parameter_list>
                              | <empty>
 ```
 
-### Verifies that above grammar is LL(1) grammar
+### Verifies that above grammar is LL(1) grammar *(out-of-date)*
 
 | FIRST(X)                             | Reduction                                                    | Results                        |
 | ------------------------------------ | ------------------------------------------------------------ | ------------------------------ |
