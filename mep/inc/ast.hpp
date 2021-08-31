@@ -5,6 +5,8 @@
 #include <optional>
 #include <tuple>
 
+#include "lexer.hpp"
+
 namespace mep::ast {
     template <class _T>
     using uptr = std::unique_ptr<_T>;
@@ -52,8 +54,8 @@ namespace mep::ast {
         ouptr<ContinuedAdditionOrSubtraction> continued;
     };
     struct ContinuedAdditionOrSubtraction {
-        uptr<Term> rhs;
-        ouptr<ContinuedAdditionOrSubtraction> continued;
+        otpl<uptr<Term>, ouptr<ContinuedAdditionOrSubtraction>> add_continued;
+        otpl<uptr<Term>, ouptr<ContinuedAdditionOrSubtraction>> sub_continued;
         bool is_empty;
     };
     struct Term {
@@ -73,15 +75,15 @@ namespace mep::ast {
         ouptr<ContinuedMultiplicationOrDivision> continued;
     };
     struct MultiplicationSignOmitted {
-        otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> f1;
-        otpl<uptr<Factor>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> f2;
-        otpl<uptr<Parenthesized>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> f3;
-        otpl<uptr<Function>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> f4;
+        otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;
+        otpl<uptr<Factor>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> factor_function;
+        otpl<uptr<Parenthesized>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_parenthesized;
+        otpl<uptr<Function>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> function_function;
     };
     struct ContinuedMultiplicationOrDivision {
-        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> f1; // Mul
-        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> f2; // Div
-        ouptr<MultiplicationSignOmitted> f3;
+        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul
+        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> div_continued; // Div
+        ouptr<MultiplicationSignOmitted> mo_continued;
         bool is_empty;
     };
     struct Factor {
@@ -102,6 +104,13 @@ namespace mep::ast {
         ouptr<PrefixUnaryExpression> prefix_unary_expression;
         ouptr<Function> function;
         std::optional<Token> number;
+    };
+    struct Parenthesized {
+        uptr<Expression> expression;
+    };
+    struct PrefixUnaryExpression {
+        ouptr<Atom> plus_atom;
+        ouptr<Atom> minus_atom;
     };
     struct Function {
         Token identifier;

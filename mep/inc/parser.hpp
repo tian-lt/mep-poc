@@ -1,9 +1,9 @@
 #ifndef MEP_PARSER_H
 #define MEP_PARSER_H
 
-#include <deque>
 #include <functional>
 #include <memory>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -87,12 +87,15 @@ multiplication_sign_omitted ::=
 */
 
 namespace mep {
-
     namespace details {
         using next_f = std::function<Token()>;
         using restore_f = std::function<void(Token&&)>;
 
-        
+        std::unique_ptr<ast::Expression> expression(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore);
 
         bool is_num_token(const Token& t);
         bool is_binary_operator_token(const Token& t);
@@ -115,9 +118,21 @@ namespace mep {
     template<class _RadixT = RadixDecimal>
     class Parser {
     public:
-        static inline ast::Expression parse(TokenStream<_RadixT>&& tstr) {
-            std::deque<Token> hold;
-
+        static inline std::unique_ptr<ast::Expression> parse(TokenStream<_RadixT>&& tstr) {
+            std::stack<Token> hold;
+            auto expr = details::expression([&]() {
+                if (hold.size() > 0) {
+                    Token retval = hold.top();
+                    hold.pop();
+                    return retval;
+                }
+                else {
+                    return tstr.next();
+                }
+                }, [&](Token&& t) {
+                    hold.emplace(std::move(t));
+                });
+            return expr;
         }
     };
 }

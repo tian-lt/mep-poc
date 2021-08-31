@@ -46,9 +46,10 @@ Operator precedence
 
 <subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
 
-<continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>
-                                      | "-" <term> <continued_addition_or_subtraction>
-                                      | <empty>
+<continued_addition_or_subtraction> ::=
+      "+" <term> <continued_addition_or_subtraction>
+    | "-" <term> <continued_addition_or_subtraction>
+    | <empty>
                                       
 <term> ::= <multiplication>
          | <division>
