@@ -22,7 +22,7 @@ namespace mep::details {
 
     template<class... _Ts>
     std::optional<std::tuple<_Ts...>> _mk_otpl(_Ts&& ...elements){
-        return std::make_optional<std::make_tuple<_Ts...>>(std::forward<_Ts>(elements)...);
+        return std::make_optional(std::make_tuple<_Ts...>((std::forward<_Ts>(elements))...));
     };
 
     template<class _T>
@@ -116,6 +116,7 @@ namespace mep::details {
                 .is_empty = false });
         }
         else if (_choose(lat, TokenType::EOE)) { // empty
+            restore(std::move(lat));
             return _mk_uptr(ast::ContinuedAdditionOrSubtraction{ .is_empty = true });
         }
         else {
@@ -123,7 +124,40 @@ namespace mep::details {
         }
     }
 
-    std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore);
+    /* **************************************************************
+    <term> ::= <multiplication>
+             | <division>
+             | <factor>
+    ************************************************************** */
+    std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore) {
+        auto mul = multiplication(next, restore);
+        if (_choose(mul)) {
+            return _mk_uptr(ast::Term{ .multiplication = _mk_opt(std::move(mul)) });
+        }
+        auto div = division(next, restore);
+        if (_choose(div)) {
+            return _mk_uptr(ast::Term{ .division = _mk_opt(std::move(div)) });
+        }
+        auto ft = factor(next, restore);
+        if (_choose(ft)) {
+            return _mk_uptr(ast::Term{ .factor = _mk_opt(std::move(ft)) });
+        }
+        throw ParserError();
+    }
+
+    /* **************************************************************
+    <multiplication> ::= <factor> "*" <factor> <continued_multiplication_or_division>
+                       | <multiplication_sign_omitted>
+    ************************************************************** */
+    std::unique_ptr<ast::Multiplication> multiplication(const next_f& next, const restore_f& restore);
+
+    /* **************************************************************
+    ************************************************************** */
+    std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore);
+
+    /* **************************************************************
+    ************************************************************** */
+    std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore);
 
     bool is_num_token(const Token& t) {
         return t.token_type == TokenType::DecimalInteger

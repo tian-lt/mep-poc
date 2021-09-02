@@ -94,8 +94,11 @@ namespace mep {
         std::unique_ptr<ast::Expression> expression(const next_f& next, const restore_f& restore);
         std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore);
         std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore);
         std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Multiplication> multiplication(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore);
+        std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore);
 
         bool is_num_token(const Token& t);
         bool is_binary_operator_token(const Token& t);
