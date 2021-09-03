@@ -89,6 +89,7 @@ namespace mep {
     };
 
     namespace details {
+        void skip_whitespaces(std::string_view& v);
         size_t common_token_lex(Token& t, std::string_view& v);
         size_t radix16_token_lex(Token& t, const std::string_view& v);
         size_t radix10_token_lex(Token& t, const std::string_view& v);
@@ -121,8 +122,12 @@ namespace mep {
         Token t = EOEToken;
         if (_view.size() > 0)
         {
+            details::skip_whitespaces(_view);
+            if (_view.size() <= 0) {
+                return EOEToken;
+            }
             auto offset = details::common_token_lex(t, _view);
-            if (offset > 0 || t.token_type == TokenType::EOE) {
+            if (offset > 0) {
                 _view = _view.substr(offset);
                 return t;
             }
@@ -133,7 +138,7 @@ namespace mep {
             }
             throw TokenStreamError();
         }
-        return t; // EOE
+        return EOEToken;
     }
 }
 

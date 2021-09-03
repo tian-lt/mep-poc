@@ -34,20 +34,19 @@ namespace mep::details {
         return false;
     }
 
-    size_t common_token_lex(Token& t, std::string_view& v) {
-        assert(v.size() > 0);
-        size_t dist = 0;
+    void skip_whitespaces(std::string_view& v) {
         // try skip whitespaces
+        size_t dist = 0;
         if (try_search(v, whitespaces, [&](auto&& m) {
                 dist = distance(m);
             })) {
             v = v.substr(dist); // skip whitespaces
-            if (v.size() == 0) {
-                t = Token{.token_type = TokenType::EOE};
-                return 0;
-            }
-            dist = 0; // reset the distance to 0
         }
+    }
+
+    size_t common_token_lex(Token& t, std::string_view& v) {
+        assert(v.size() > 0);
+        size_t dist = 0;
         char single_sym = v.front();
         const auto& symit = _ch_to_tokentype.find(single_sym);
         if (symit != _ch_to_tokentype.cend()) {

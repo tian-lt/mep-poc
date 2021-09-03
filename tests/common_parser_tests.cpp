@@ -1,9 +1,16 @@
 #include "gtest/gtest.h"
 #include "parser.hpp"
 
-TEST(CommonParserTests, SimpleExpression) {
-    const auto& expr = mep::Parser<mep::RadixDecimal>::parse(
-        mep::TokenStream<mep::RadixDecimal>(""));
+#include "utils.hpp"
+
+TEST(CommonParserTests, EmptyExpression) {
+    EXPECT_TRUE(handle_parser_error([]() {
+        const auto& expr = mep::Parser<mep::RadixDecimal>::parse(
+            mep::TokenStream<mep::RadixDecimal>(""));
+        },
+        [](const mep::ParserError& error) {
+            return true;
+        }));
 }
 
 
