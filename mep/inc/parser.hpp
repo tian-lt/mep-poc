@@ -94,31 +94,28 @@ namespace mep {
         template<class... _Ts>
         class KnownASTCollection {
         public:
-            template<class V>
-            void push(V&& value) {
-                _get<V>().push(std::move(value));
+            template<class _Tv>
+            void push(_Tv&& value) {
+                _get<_Tv>().push(std::move(value));
             }
-
-            template<class V>
+            template<class _Tv>
             bool has_item() {
-                return _get<V>().size() > 0;
+                return _get<_Tv>().size() > 0;
             }
-
-            template<class V>
-            V pop() {
-                auto&& v = _get<V>().top();
-                _get<V>().pop();
-                return v;
+            template<class _Tv>
+            _Tv pop() {
+                auto&& v = _get<_Tv>().top();
+                _get<_Tv>().pop();
+                return std::move(v);
             }
-
-            template<class V>
-            V& top() {
-                return _get<V>().top();
+            template<class _Tv>
+            _Tv& top() {
+                return _get<_Tv>().top();
             }
         private:
-            template<class V>
-            std::stack<V>& _get() {
-                return std::get<std::stack<V>>(_ast_stacks);
+            template<class _Tv>
+            std::stack<_Tv>& _get() {
+                return std::get<std::stack<_Tv>>(_ast_stacks);
             }
         private:
             std::tuple<std::stack<_Ts>...>_ast_stacks;
@@ -136,6 +133,9 @@ namespace mep {
         std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Multiplication> multiplication(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::MultiplicationSignOmitted> multiplication_sign_omitted(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ContinuedMultiplicationOrDivision> continued_multiplication_or_division(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ContinuedMultiplicationSignOmitted> continued_multiplication_sign_omitted(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Exponentiation> exponentiation(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::PostfixUnaryExpression> postfix_unary_expression(const next_f& next, const restore_f& restore, kac_t& kac);
@@ -146,7 +146,7 @@ namespace mep {
         std::unique_ptr<ast::ParameterList> parameter_list(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::ContinuedParameterList> continued_parameter_list(const next_f& next, const restore_f& restore, kac_t& kac);
 
-        bool is_num_token(const Token& t);
+        constexpr bool is_num_token(const Token& t);
         bool is_binary_operator_token(const Token& t);
         bool is_identifier_token(const Token& t);
         bool is_pre_unary_token(const Token& t);

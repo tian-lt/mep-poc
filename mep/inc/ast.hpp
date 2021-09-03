@@ -26,6 +26,7 @@ namespace mep::ast {
     struct Multiplication;
     struct Division;
     struct ContinuedMultiplicationOrDivision;
+    struct ContinuedMultiplicationSignOmitted;
     struct MultiplicationSignOmitted;
     struct Factor;
     struct PostfixUnaryExpression;
@@ -83,8 +84,12 @@ namespace mep::ast {
     struct ContinuedMultiplicationOrDivision {
         otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul
         otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> div_continued; // Div
-        ouptr<MultiplicationSignOmitted> mo_continued;
+        ouptr<ContinuedMultiplicationSignOmitted> mo_continued;
         bool is_empty;
+    };
+    struct ContinuedMultiplicationSignOmitted {
+        otpl<uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_continued;
+        otpl<uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> function_continued;
     };
     struct Factor {
         ouptr<PostfixUnaryExpression> postfix_unary_expression;

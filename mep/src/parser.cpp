@@ -27,35 +27,93 @@ namespace mep::details {
     };
 
     template<class _T>
-    void _expect(const std::unique_ptr<_T>& t) {
+    constexpr void _expect(const std::unique_ptr<_T>& t) {
         if (t == nullptr) {
             throw ParserError();
         }
     }
 
-    void _expect(const Token& t, const TokenType& ty) {
+    constexpr void _expect(const Token& t, const TokenType& ty) {
         if (t.token_type != ty) {
             throw ParserError();
         }
     }
 
-    template<class _T>
-    constexpr bool _match_first(const Token& t);
+    constexpr void _expect(bool compare_result) {
+        if (!compare_result) {
+            throw ParserError();
+        }
+    }
 
+    template<class _T>
+    constexpr bool _match_first(const Token& t) {
+        throw std::logic_error("not implemented");
+    }
     template<>
     constexpr bool _match_first<ast::Parenthesized>(const Token& t) {
         return t.token_type == TokenType::LeftParenthesis;
     }
-
     template<>
     constexpr bool _match_first<ast::PrefixUnaryExpression>(const Token& t) {
         return t.token_type == TokenType::Plus
             || t.token_type == TokenType::Minus;
     }
-
     template<>
     constexpr bool _match_first<ast::Function>(const Token& t) {
         return t.token_type == TokenType::Identifier;
+    }
+    template<>
+    constexpr bool _match_first<ast::Atom>(const Token& t){
+        return _match_first<ast::Parenthesized>(t)
+            || _match_first<ast::PrefixUnaryExpression>(t)
+            || _match_first<ast::Function>(t)
+            || is_num_token(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::Exponentiation>(const Token& t) {
+        return _match_first<ast::Atom>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::PostfixUnaryExpression>(const Token& t) {
+        return _match_first<ast::Atom>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::Factor>(const Token& t) {
+        return _match_first<ast::PostfixUnaryExpression>(t)
+            || _match_first<ast::Exponentiation>(t)
+            || _match_first<ast::Atom>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::MultiplicationSignOmitted>(const Token& t) {
+        return _match_first<ast::Factor>(t)
+            || _match_first<ast::ParameterList>(t)
+            || _match_first<ast::Function>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::ContinuedMultiplicationSignOmitted>(const Token& t) {
+        return _match_first<ast::Parenthesized>(t)
+            || _match_first<ast::Function>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::ContinuedMultiplicationOrDivision>(const Token& t) {
+        return t.token_type == TokenType::Mult
+            || t.token_type == TokenType::Divide
+            || _match_first<ast::ContinuedMultiplicationSignOmitted>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::Multiplication>(const Token& t) {
+        return _match_first<ast::Factor>(t)
+            || _match_first<ast::MultiplicationSignOmitted>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::Division>(const Token& t) {
+        return _match_first<ast::Factor>(t);
+    }
+    template<>
+    constexpr bool _match_first<ast::Term>(const Token& t) {
+        return _match_first<ast::Multiplication>(t)
+            || _match_first<ast::Division>(t)
+            || _match_first<ast::Factor>(t);
     }
 
     /* **************************************************************
@@ -64,9 +122,17 @@ namespace mep::details {
                    | <term>
     ************************************************************** */
     std::unique_ptr<ast::Expression> expression(const next_f& next, const restore_f& restore, kac_t& kac){
-        auto lan = term(next, restore, kac); // look ahead node
-        _expect(lan);
-        kac.push(std::move(lan));
+        // to avoid backtracking, we need to decide which fork we have choose
+        // so, we can parse the common syntax part - a **term** - and then check the operator
+        // if the operator is "+", then the next selection must be addition
+        // if the operator is "-", then the next selection must be subtraction
+        // if the operator is EOE, then we meet the finish of expression
+        // otherwise, the input expression must be wrong in syntax
+        auto trm = term(next, restore, kac); // look ahead to seek for a term
+        _expect(trm);
+        kac.push(std::move(trm));
+
+        // look ahead to decide which fork to choose
         Token lat = next(); // look ahead token
         if (_choose(lat, TokenType::Plus)) { // addition
             restore(std::move(lat));
@@ -92,89 +158,135 @@ namespace mep::details {
     /* **************************************************************
     <addition> ::= <term> "+" <term> <continued_addition_or_subtraction>
     ************************************************************** */
-    //std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore) {
-    //    auto lhs = term(next, restore);
-    //    _expect(lhs);
-    //    _expect(next(), TokenType::Plus);
-    //    auto rhs = term(next, restore);
-    //    _expect(rhs);
-    //    auto continued = continued_addition_or_subtraction(next, restore);
-    //    return _mk_uptr(ast::Addition{
-    //        .lhs = std::move(lhs),
-    //        .rhs = std::move(rhs),
-    //        .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
-    //}
+    std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore, kac_t& kac) {
+        // we expects that the firt term has been parsed by the upstream process - expression().
+        _expect(kac.has_item<std::unique_ptr<ast::Term>>());
+        auto lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        _expect(lhs);
 
+        _expect(next(), TokenType::Plus);
+        auto rhs = term(next, restore, kac);
+        _expect(rhs);
+        auto continued = continued_addition_or_subtraction(next, restore, kac);
+        return _mk_uptr(ast::Addition{
+            .lhs = std::move(lhs),
+            .rhs = std::move(rhs),
+            .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
+    }
 
     /* **************************************************************
     <subtraction> ::= <term> "-" <term> <continued_addition_or_subtraction>
     ************************************************************** */
-    //std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore) {
-    //    auto lhs = term(next, restore);
-    //    _expect(lhs);
-    //    _expect(next(), TokenType::Minus);
-    //    auto rhs = term(next, restore);
-    //    _expect(rhs);
-    //    auto continued = continued_addition_or_subtraction(next, restore);
-    //    return _mk_uptr(ast::Subtraction{
-    //        .lhs = std::move(lhs),
-    //        .rhs = std::move(rhs),
-    //        .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
-    //}
+    std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore, kac_t&& kac) {
+        // we expects that the firt term has been parsed by the upstream process - expression().
+        _expect(kac.has_item<std::unique_ptr<ast::Term>>());
+        auto lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        _expect(lhs);
+
+        _expect(next(), TokenType::Minus);
+        auto rhs = term(next, restore, kac);
+        _expect(rhs);
+        auto continued = continued_addition_or_subtraction(next, restore, kac);
+        return _mk_uptr(ast::Subtraction{
+            .lhs = std::move(lhs),
+            .rhs = std::move(rhs),
+            .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
+    }
 
     /* **************************************************************
     <continued_addition_or_subtraction> ::= "+" <term> <continued_addition_or_subtraction>
                                           | "-" <term> <continued_addition_or_subtraction>
                                           | <empty>
     ************************************************************** */
-    //std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore) {
-    //    Token lat = next(); // look ahead token
-    //    if (_choose(lat, TokenType::Plus)) { // "+"
-    //        auto trm = term(next, restore);
-    //        _expect(trm);
-    //        auto continued = continued_addition_or_subtraction(next, restore);
-    //        return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
-    //            .add_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
-    //            .is_empty = false });
-    //    }
-    //    else if (_choose(lat, TokenType::Minus)) { // "-"
-    //        auto trm = term(next, restore);
-    //        _expect(trm);
-    //        auto continued = continued_addition_or_subtraction(next, restore);
-    //        return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
-    //            .sub_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
-    //            .is_empty = false });
-    //    }
-    //    else if (_choose(lat, TokenType::EOE)) { // empty
-    //        restore(std::move(lat));
-    //        return _mk_uptr(ast::ContinuedAdditionOrSubtraction{ .is_empty = true });
-    //    }
-    //    else {
-    //        throw ParserError();
-    //    }
-    //}
+    std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore, kac_t& kac) {
+        Token lat = next(); // look ahead token
+        if (_choose(lat, TokenType::Plus)) { // "+"
+            auto trm = term(next, restore, kac);
+            _expect(trm);
+            auto continued = continued_addition_or_subtraction(next, restore, kac);
+            return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
+                .add_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
+                .is_empty = false });
+        }
+        else if (_choose(lat, TokenType::Minus)) { // "-"
+            auto trm = term(next, restore, kac);
+            _expect(trm);
+            auto continued = continued_addition_or_subtraction(next, restore, kac);
+            return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
+                .sub_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
+                .is_empty = false });
+        }
+        else if (_choose(lat, TokenType::EOE)) { // empty
+            restore(std::move(lat));
+            return _mk_uptr(ast::ContinuedAdditionOrSubtraction{ .is_empty = true });
+        }
+        throw ParserError();
+    }
 
     /* **************************************************************
     <term> ::= <multiplication>
              | <division>
              | <factor>
     ************************************************************** */
-    //std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore) {
-        //auto mul = multiplication(next, restore);
-        //if (_choose(mul)) {
-        //    return _mk_uptr(ast::Term{ .multiplication = _mk_opt(std::move(mul)) });
-        //}
-        //auto div = division(next, restore);
-        //if (_choose(div)) {
-        //    return _mk_uptr(ast::Term{ .division = _mk_opt(std::move(div)) });
-        //}
-        //auto ft = factor(next, restore);
-        //if (_choose(ft)) {
-        //    return _mk_uptr(ast::Term{ .factor = _mk_opt(std::move(ft)) });
-        //}
-    //    throw ParserError();
-    //}
+    std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore, kac_t& kac) {
+        Token lat = next(); // look ahead token
+        // choose which fork we need to go with.
+        // attention: below implementation requires that:
+        //    FIRST(factor) INTERSECTS FIRST(parenthesized) INTERSECTS FIRST(function) = empty
+        if (_match_first<ast::Factor>(lat)) {
+            // in this fork, there might be:
+            //  - Multiplication/factor ...
+            //  - Multiplication/MultiplicationSignOmitted/factor ...
+            //  - Division/factor ...
+            //  - factor
+            restore(std::move(lat));
+            auto fctr = factor(next, restore, kac);
+            _expect(fctr);
 
+            lat = next();
+            if (_choose(lat, TokenType::Mult)) {
+                // case - Multiplication/factor * factor ...
+                restore(std::move(lat));
+                kac.push(std::move(fctr));
+                auto mul = multiplication(next, restore, kac);
+                _expect(mul);
+                return _mk_uptr(ast::Term{ .multiplication = std::move(mul) });
+            }
+            if (_choose(lat, TokenType::Divide)) {
+                // case - Division/factor ...
+                restore(std::move(lat));
+                kac.push(std::move(fctr));
+                auto div = division(next, restore, kac);
+                _expect(div);
+                return _mk_uptr(ast::Term{ .division = std::move(div) });
+            }
+            else if(_match_first<ast::Parenthesized>(lat)
+                || _match_first<ast::Function>(lat))  {
+                // case - Multiplication/MultiplicationSignOmitted/factor ...
+                restore(std::move(lat));
+                kac.push(std::move(fctr));
+                auto mul = multiplication(next, restore, kac);
+                _expect(mul);
+                return _mk_uptr(ast::Term{ .multiplication = std::move(mul) });
+            }
+            else {
+                // case - factor
+                restore(std::move(lat));
+                return _mk_uptr(ast::Term{ .factor = std::move(fctr) });
+            }
+        }
+        else if (_match_first<ast::Parenthesized>(lat)
+            || _match_first<ast::Function>(lat)) {
+            // in this fork, there might be:
+            //  - Multiplication/MultiplicationSignOmitted/parenthesized ...
+            //  - Multiplication/MultiplicationSignOmitted/function ...
+            restore(std::move(lat));
+            auto mul = multiplication(next, restore, kac);
+            _expect(mul);
+            return _mk_uptr(ast::Term{ .multiplication = std::move(mul) });
+        }
+        throw ParserError();
+    }
 
     /* **************************************************************
     <multiplication> ::= <factor> "*" <factor> <continued_multiplication_or_division>
@@ -348,7 +460,7 @@ namespace mep::details {
         }
     }
 
-    bool is_num_token(const Token& t) {
+    constexpr bool is_num_token(const Token& t) {
         return t.token_type == TokenType::DecimalInteger
             || t.token_type == TokenType::DecimalFloat
             || t.token_type == TokenType::DecimalScientificNumber
