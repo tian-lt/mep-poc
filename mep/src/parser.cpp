@@ -525,23 +525,47 @@ namespace mep::details {
                | <atom>
     ************************************************************** */
     std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore, kac_t& kac) {
+        // to avoid backtracking, we need to decide which fork we have choose
+        // so, we can parse the common syntax part - a **atom** - and then check the operator
+        // if the operator is "^", then the next selection must be postfix_unary_expression or exponentiation 
+        // if the operator is <postfix_unary_operator>, then the next selection must be postfix_expression 
+        // otherwise, the next selection is atom it self
+        auto a = atom(next, restore, kac);
         Token lat = next(); // look ahead token
-        if (_match_first<ast::PostfixUnaryExpression>(lat)) {
+        if (_choose(lat, TokenType::Caret)) {
+            // exponentiation or postfix_unary_expression
             restore(std::move(lat));
-            auto p = postfix_unary_expression(next, restore, kac);
-            _expect(p);
-            return _mk_uptr(ast::Factor{ .postfix_unary_expression = std::move(p) });
-        }
-        else if (_match_first<ast::Exponentiation>(lat)) {
-            restore(std::move(lat));
+            kac.push(std::move(a));
             auto e = exponentiation(next, restore, kac);
             _expect(e);
-            return _mk_uptr(ast::Factor{ .exponentiation = std::move(e) });
+            lat = next(); // look ahead token
+            if (_choose(lat, TokenType::Factorial) ||
+                _choose(lat, TokenType::Percent)) {
+                // postfix_unary_expression
+                restore(std::move(lat));
+                kac.push(std::move(e));
+                auto postfix_expr = postfix_unary_expression(next, restore, kac);
+                _expect(postfix_expr);
+                return _mk_uptr(ast::Factor{ .postfix_unary_expression = std::move(postfix_expr) });
+            }
+            else {
+                // exponentiation
+                restore(std::move(lat));
+                return _mk_uptr(ast::Factor{ .exponentiation = std::move(e) });
+            }
         }
-        else if (_match_first<ast::Atom>(lat)) {
+        else if (_choose(lat, TokenType::Factorial) ||
+            _choose(lat, TokenType::Percent)) {
+            // postfix_unary_expression
             restore(std::move(lat));
-            auto a = atom(next, restore, kac);
-            _expect(a);
+            kac.push(std::move(a));
+            auto postfix_expr = postfix_unary_expression(next, restore, kac);
+            _expect(postfix_expr);
+            return _mk_uptr(ast::Factor{ .postfix_unary_expression = std::move(postfix_expr) });
+        }
+        else {
+            // atom
+            restore(std::move(lat));
             return _mk_uptr(ast::Factor{ .atom = std::move(a) });
         }
         throw ParserError();

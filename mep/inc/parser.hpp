@@ -122,6 +122,8 @@ namespace mep {
         };
 
         using kac_t = KnownASTCollection<
+            std::unique_ptr<ast::Atom>,
+            std::unique_ptr<ast::Exponentiation>,
             std::unique_ptr<ast::Factor>,
             std::unique_ptr<ast::Term>
         >;
