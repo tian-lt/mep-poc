@@ -138,6 +138,7 @@ namespace mep {
         std::unique_ptr<ast::ContinuedMultiplicationSignOmitted> continued_multiplication_sign_omitted(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Exponentiation> exponentiation(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ContinuedExponentiation> continued_exponentiation(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::PostfixUnaryExpression> postfix_unary_expression(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Atom> atom(const next_f& next, const restore_f& restore, kac_t& kac);
         std::unique_ptr<ast::Parenthesized> parenthesized(const next_f& next, const restore_f& restore, kac_t& kac);

@@ -62,7 +62,9 @@ multiplication_sign_omitted ::=
       <factor> <parenthesized> <continued_multiplication_or_division>
    	| <factor> <function> <continued_multiplication_or_division>
 	| <parenthesized> <parenthesized> <continued_multiplication_or_division>
+	| <parenthesized> <function> <continued_multiplication_or_division>
    	| <function> <function> <continued_multiplication_or_division>
+   	| <function> <parenthesized> <continued_multiplication_or_division>
 
 <division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
 
@@ -87,7 +89,10 @@ multiplication_sign_omitted ::=
 <postfix_unary_expression> ::= <exponentiation> <postfix_unary_operator>
                              | <atom> <postfix_unary_operator>
                              
-<exponentiation> ::= <atom> "^" <atom>
+<exponentiation> ::= <atom> "^" <atom> <continued_exponentiation>
+
+<continued_exponentiation> ::= "^" <atom>
+                             | <empty>
 
 <postfix_unary_operator> ::= "!"
                            | "%"

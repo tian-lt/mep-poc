@@ -31,6 +31,7 @@ namespace mep::ast {
     struct Factor;
     struct PostfixUnaryExpression;
     struct Exponentiation;
+    struct ContinuedExponentiation;
     struct Atom;
     struct Parenthesized;
     struct PrefixUnaryExpression;
@@ -79,7 +80,9 @@ namespace mep::ast {
         otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;
         otpl<uptr<Factor>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> factor_function;
         otpl<uptr<Parenthesized>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_parenthesized;
+        otpl<uptr<Parenthesized>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_function;
         otpl<uptr<Function>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> function_function;
+        otpl<uptr<Function>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> function_parenthesized;
     };
     struct ContinuedMultiplicationOrDivision {
         otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul
@@ -103,6 +106,12 @@ namespace mep::ast {
     struct Exponentiation {
         uptr<Atom> lhs;
         uptr<Atom> rhs;
+        uptr<ContinuedExponentiation> continued;
+    };
+    struct ContinuedExponentiation {
+        uptr<Atom> atom;
+        uptr<ContinuedExponentiation> continued;
+        bool is_empty;
     };
     struct Atom {
         ouptr<Parenthesized> parenthesized;

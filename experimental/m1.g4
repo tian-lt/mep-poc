@@ -33,7 +33,8 @@ factor: postfix_unary_expression
       | atom;
 postfix_unary_expression: exponentiation (Fact | Percent)
                         | atom (Fact | Percent);
-exponentiation: atom Caret atom;
+exponentiation: atom Caret atom continued_exp;
+continued_exp: Caret atom continued_exp|;
 atom: parenthesized
     | prefix_unary_expression
     | function
