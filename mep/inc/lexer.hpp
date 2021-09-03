@@ -40,6 +40,7 @@ namespace mep {
         // others
         LeftParenthesis,
         RightParenthesis,
+        Comma,
         Identifier,
         EOE, // end of expression
     };

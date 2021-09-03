@@ -118,12 +118,12 @@ namespace mep::ast {
     };
     struct ParameterList {
         uptr<Expression> expression;
-        ouptr<ContinuedParameterList> continued;
+        uptr<ContinuedParameterList> continued;
         bool is_empty;
     };
     struct ContinuedParameterList {
         uptr<Expression> expression;
-        ouptr<ContinuedParameterList> continued;
+        uptr<ContinuedParameterList> continued;
         bool is_empty;
     };
 } // namespace mep::ast

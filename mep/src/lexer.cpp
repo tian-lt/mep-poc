@@ -13,6 +13,7 @@ namespace mep::details {
         {'(', TokenType::LeftParenthesis},
         {')', TokenType::RightParenthesis},
         {'!', TokenType::Factorial},
+        {',', TokenType::Comma},
         {'=', TokenType::Equals},
     };
 

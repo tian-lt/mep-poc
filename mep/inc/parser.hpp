@@ -91,14 +91,60 @@ namespace mep {
         using next_f = std::function<Token()>;
         using restore_f = std::function<void(Token&&)>;
 
-        std::unique_ptr<ast::Expression> expression(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Multiplication> multiplication(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore);
-        std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore);
+        template<class... _Ts>
+        class KnownASTCollection {
+        public:
+            template<class V>
+            void push(V&& value) {
+                _get<V>().push(std::move(value));
+            }
+
+            template<class V>
+            bool has_item() {
+                return _get<V>().size() > 0;
+            }
+
+            template<class V>
+            V pop() {
+                auto&& v = _get<V>().top();
+                _get<V>().pop();
+                return v;
+            }
+
+            template<class V>
+            V& top() {
+                return _get<V>().top();
+            }
+        private:
+            template<class V>
+            std::stack<V>& _get() {
+                return std::get<std::stack<V>>(_ast_stacks);
+            }
+        private:
+            std::tuple<std::stack<_Ts>...>_ast_stacks;
+        };
+
+        using kac_t = KnownASTCollection<
+            std::unique_ptr<ast::Factor>,
+            std::unique_ptr<ast::Term>
+        >;
+
+        std::unique_ptr<ast::Expression> expression(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ContinuedAdditionOrSubtraction> continued_addition_or_subtraction(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Term> term(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Multiplication> multiplication(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Factor> factor(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Exponentiation> exponentiation(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::PostfixUnaryExpression> postfix_unary_expression(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Atom> atom(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Parenthesized> parenthesized(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::PrefixUnaryExpression> prefix_unary_expression(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::Function> function(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ParameterList> parameter_list(const next_f& next, const restore_f& restore, kac_t& kac);
+        std::unique_ptr<ast::ContinuedParameterList> continued_parameter_list(const next_f& next, const restore_f& restore, kac_t& kac);
 
         bool is_num_token(const Token& t);
         bool is_binary_operator_token(const Token& t);
@@ -123,6 +169,7 @@ namespace mep {
     public:
         static inline std::unique_ptr<ast::Expression> parse(TokenStream<_RadixT>&& tstr) {
             std::stack<Token> hold;
+            details::kac_t kac;
             auto expr = details::expression([&]() {
                 if (hold.size() > 0) {
                     Token retval = hold.top();
@@ -134,7 +181,8 @@ namespace mep {
                 }
                 }, [&](Token&& t) {
                     hold.emplace(std::move(t));
-                });
+                },
+                kac);
             return expr;
         }
     };
