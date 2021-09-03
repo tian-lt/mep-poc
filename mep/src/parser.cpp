@@ -577,23 +577,18 @@ namespace mep::details {
                                  | <atom> <postfix_unary_operator>
     ************************************************************** */
     std::unique_ptr<ast::PostfixUnaryExpression> postfix_unary_expression(const next_f& next, const restore_f& restore, kac_t& kac) {
-        Token lat = next(); // look ahead token
-        if (_match_first<ast::Exponentiation>(lat)) {
-            restore(std::move(lat));
-            auto e = exponentiation(next, restore, kac);
-            _expect(e);
-            Token operator_token = next();
-            if (_choose(operator_token, TokenType::Factorial)
-                || _choose(operator_token, TokenType::Percent)) {
-                return _mk_uptr(ast::PostfixUnaryExpression{
-                    .power = _mk_otpl(std::move(e), std::move(operator_token)) });
+        if (kac.has_item<std::unique_ptr<ast::Atom>>()) {
+            auto a = kac.pop<std::unique_ptr<ast::Atom>>();
+            if (kac.has_item<std::unique_ptr<ast::Exponentiation>>()) {
+                auto e = kac.pop<std::unique_ptr<ast::Exponentiation>>();
+                Token operator_token = next();
+                if (_choose(operator_token, TokenType::Factorial)
+                    || _choose(operator_token, TokenType::Percent)) {
+                    return _mk_uptr(ast::PostfixUnaryExpression{
+                        .power = _mk_otpl(std::move(e), std::move(operator_token)) });
+                }
+                throw ParserError();
             }
-            throw ParserError();
-        }
-        else if (_match_first<ast::Atom>(lat)) {
-            restore(std::move(lat));
-            auto a = atom(next, restore, kac);
-            _expect(a);
             Token operator_token = next();
             if (_choose(operator_token, TokenType::Factorial)
                 || _choose(operator_token, TokenType::Percent)) {
@@ -602,14 +597,47 @@ namespace mep::details {
             }
             throw ParserError();
         }
-        throw ParserError();
+        else {
+            Token lat = next(); // look ahead token
+            if (_match_first<ast::Exponentiation>(lat)) {
+                restore(std::move(lat));
+                auto e = exponentiation(next, restore, kac);
+                _expect(e);
+                Token operator_token = next();
+                if (_choose(operator_token, TokenType::Factorial)
+                    || _choose(operator_token, TokenType::Percent)) {
+                    return _mk_uptr(ast::PostfixUnaryExpression{
+                        .power = _mk_otpl(std::move(e), std::move(operator_token)) });
+                }
+                throw ParserError();
+            }
+            else if (_match_first<ast::Atom>(lat)) {
+                restore(std::move(lat));
+                auto a = atom(next, restore, kac);
+                _expect(a);
+                Token operator_token = next();
+                if (_choose(operator_token, TokenType::Factorial)
+                    || _choose(operator_token, TokenType::Percent)) {
+                    return _mk_uptr(ast::PostfixUnaryExpression{
+                        .atom_operator = _mk_otpl(std::move(a), std::move(operator_token)) });
+                }
+                throw ParserError();
+            }
+            throw ParserError();
+        }
     }
 
     /* **************************************************************
     <exponentiation> ::= <atom> "^" <atom>
     ************************************************************** */
     std::unique_ptr<ast::Exponentiation> exponentiation(const next_f& next, const restore_f& restore, kac_t& kac) {
-        auto lhs = atom(next, restore, kac);
+        std::unique_ptr<ast::Atom> lhs;
+        if (kac.has_item<std::unique_ptr<ast::Atom>>()){
+            lhs = kac.pop<std::unique_ptr<ast::Atom>>();
+        }
+        else {
+            lhs = atom(next, restore, kac);
+        }
         _expect(lhs);
         Token caret = next();
         _expect(caret, TokenType::Caret);
