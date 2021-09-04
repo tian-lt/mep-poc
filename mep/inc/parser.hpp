@@ -104,9 +104,9 @@ namespace mep {
             }
             template<class _Tv>
             _Tv pop() {
-                auto&& v = _get<_Tv>().top();
+                _Tv v = std::move(_get<_Tv>().top());
                 _get<_Tv>().pop();
-                return std::move(v);
+                return v;
             }
             template<class _Tv>
             _Tv& top() {

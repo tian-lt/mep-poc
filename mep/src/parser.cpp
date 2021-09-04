@@ -146,13 +146,11 @@ namespace mep::details {
             _expect(sub);
             return _mk_uptr(ast::Expression{ .subtraction = std::move(sub) });
         }
-        else if(_choose(lat, TokenType::EOE)) { // end of expression
+        else { // term
             restore(std::move(lat));
-            auto trm = term(next, restore, kac);
-            _expect(trm);
-            return _mk_uptr(ast::Expression{ .term = std::move(trm) });
+            auto t = kac.pop<std::unique_ptr<ast::Term>>();
+            return _mk_uptr(ast::Expression{ .term = std::move(t) });
         }
-        throw ParserError();
     }
 
     /* **************************************************************
@@ -796,7 +794,8 @@ namespace mep::details {
             _expect(con);
             return _mk_uptr(ast::ContinuedParameterList{
                 .expression = std::move(expr),
-                .continued = std::move(con)});
+                .continued = std::move(con),
+                .is_empty = false });
         }
         else {
             restore(std::move(lat));
