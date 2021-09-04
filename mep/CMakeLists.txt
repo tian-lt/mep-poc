@@ -2,6 +2,7 @@ project(mep)
 
 set(MEP_HEADER_FILES
     inc/ast.hpp
+    inc/evaluator.hpp
     inc/lexer.hpp
     inc/parser.hpp
     inc/visitor.hpp
