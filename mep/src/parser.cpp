@@ -158,8 +158,13 @@ namespace mep::details {
     ************************************************************** */
     std::unique_ptr<ast::Addition> addition(const next_f& next, const restore_f& restore, kac_t& kac) {
         // we expects that the firt term has been parsed by the upstream process - expression().
-        _expect(kac.has_item<std::unique_ptr<ast::Term>>());
-        auto lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        std::unique_ptr<ast::Term> lhs;
+        if (kac.has_item<std::unique_ptr<ast::Term>>()) {
+            lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        }
+        else {
+            lhs = term(next, restore, kac);
+        }
         _expect(lhs);
 
         _expect(next(), TokenType::Plus);
@@ -177,8 +182,13 @@ namespace mep::details {
     ************************************************************** */
     std::unique_ptr<ast::Subtraction> subtraction(const next_f& next, const restore_f& restore, kac_t& kac) {
         // we expects that the firt term has been parsed by the upstream process - expression().
-        _expect(kac.has_item<std::unique_ptr<ast::Term>>());
-        auto lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        std::unique_ptr<ast::Term> lhs;
+        if (kac.has_item<std::unique_ptr<ast::Term>>()) {
+            lhs = kac.pop<std::unique_ptr<ast::Term>>();
+        }
+        else {
+            lhs = term(next, restore, kac);
+        }
         _expect(lhs);
 
         _expect(next(), TokenType::Minus);
@@ -214,11 +224,10 @@ namespace mep::details {
                 .sub_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
                 .is_empty = false });
         }
-        else if (_choose(lat, TokenType::EOE)) { // empty
+        else { // empty
             restore(std::move(lat));
             return _mk_uptr(ast::ContinuedAdditionOrSubtraction{ .is_empty = true });
         }
-        throw ParserError();
     }
 
     /* **************************************************************

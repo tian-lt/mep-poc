@@ -23,6 +23,97 @@ TEST(CommonParserTests, SimpleExpression) {
     EXPECT_FALSE(expr->term.has_value());
 }
 
+TEST(CommonParserTests, ComplexExpression) {
+    auto expr = mep::Parser<mep::RadixDecimal>::parse(
+        mep::TokenStream<mep::RadixDecimal>("1+2/3000"));
+
+    expr = mep::Parser<mep::RadixDecimal>::parse(
+        mep::TokenStream<mep::RadixDecimal>("(1+2)(3+4)"));
+
+    expr = mep::Parser<mep::RadixDecimal>::parse(
+        mep::TokenStream<mep::RadixDecimal>("sin(23)(1+2)(3+4)cos(8383)"));
+
+    expr = mep::Parser<mep::RadixDecimal>::parse(
+        mep::TokenStream<mep::RadixDecimal>("1+2/3000(758*133421/32^121)"));
+}
+
+TEST(CommonParserTests, Addition) {
+    auto addition = MockParser<mep::ast::Addition, mep::RadixDecimal, decltype(mep::details::addition)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1+2"), mep::details::addition);
+    EXPECT_EQ(std::get<std::string>(addition->lhs->factor.value()->atom.value()->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(addition->rhs->factor.value()->atom.value()->number.value().payload), "2");
+
+    auto addition2 = MockParser<mep::ast::Addition, mep::RadixDecimal, decltype(mep::details::addition)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1+2+3"), mep::details::addition);
+    EXPECT_EQ(std::get<std::string>(addition2->lhs->factor.value()->atom.value()->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(addition2->rhs->factor.value()->atom.value()->number.value().payload), "2");
+    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(addition2->continued.value()->add_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
+    EXPECT_TRUE(std::get<std::optional<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>>(addition2->continued.value()->add_continued.value()).value()->is_empty);
+}
+
+TEST(CommonParserTests, Subtraction) {
+    auto subtraction = MockParser<mep::ast::Subtraction, mep::RadixDecimal, decltype(mep::details::subtraction)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1-2"), mep::details::subtraction);
+    EXPECT_EQ(std::get<std::string>(subtraction->lhs->factor.value()->atom.value()->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(subtraction->rhs->factor.value()->atom.value()->number.value().payload), "2");
+
+    auto subtraction2 = MockParser<mep::ast::Subtraction, mep::RadixDecimal, decltype(mep::details::subtraction)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1-2-3"), mep::details::subtraction);
+    EXPECT_EQ(std::get<std::string>(subtraction2->lhs->factor.value()->atom.value()->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(subtraction2->rhs->factor.value()->atom.value()->number.value().payload), "2");
+    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(subtraction2->continued.value()->sub_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
+    EXPECT_TRUE(std::get<std::optional<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>>(subtraction2->continued.value()->sub_continued.value()).value()->is_empty);
+}
+
+TEST(CommonParserTests, Term) {
+    // multiplication
+    auto term = MockParser<mep::ast::Term, mep::RadixDecimal, decltype(mep::details::term)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("8*9"), mep::details::term);
+    EXPECT_EQ(std::get<std::string>(term->multiplication.value()->lhs.value()->atom.value()->number.value().payload), "8");
+    EXPECT_EQ(std::get<std::string>(term->multiplication.value()->rhs.value()->atom.value()->number.value().payload), "9");
+    EXPECT_FALSE(term->division.has_value());
+    EXPECT_FALSE(term->factor.has_value());
+
+    // division
+    auto term2 = MockParser<mep::ast::Term, mep::RadixDecimal, decltype(mep::details::term)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("10/11"), mep::details::term);
+    EXPECT_EQ(std::get<std::string>(term2->division.value()->lhs->atom.value()->number.value().payload), "10");
+    EXPECT_EQ(std::get<std::string>(term2->division.value()->rhs->atom.value()->number.value().payload), "11");
+    EXPECT_FALSE(term2->multiplication.has_value());
+    EXPECT_FALSE(term2->factor.has_value());
+
+    // factor
+    auto term3 = MockParser<mep::ast::Term, mep::RadixDecimal, decltype(mep::details::term)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1234"), mep::details::term);
+    EXPECT_EQ(std::get<std::string>(term3->factor.value()->atom.value()->number.value().payload), "1234");
+    EXPECT_FALSE(term3->multiplication.has_value());
+    EXPECT_FALSE(term3->division.has_value());
+}
+
+TEST(CommonParserTests, Factor) {
+    // postfix unary expression
+    auto factor = MockParser<mep::ast::Factor, mep::RadixDecimal, decltype(mep::details::factor)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("123!"), mep::details::factor);
+    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Atom>>(factor->postfix_unary_expression.value()->atom_operator.value())->number.value().payload), "123");
+    EXPECT_FALSE(factor->exponentiation.has_value());
+    EXPECT_FALSE(factor->atom.has_value());
+
+    // exponentiation
+    auto factor2 = MockParser<mep::ast::Factor, mep::RadixDecimal, decltype(mep::details::factor)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("6^7"), mep::details::factor);
+    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->lhs->number.value().payload), "6");
+    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->rhs->number.value().payload), "7");
+    EXPECT_FALSE(factor2->atom.has_value());
+    EXPECT_FALSE(factor2->postfix_unary_expression.has_value());
+
+    // atom
+    auto factor3 = MockParser<mep::ast::Factor, mep::RadixDecimal, decltype(mep::details::factor)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("55"), mep::details::factor);
+    EXPECT_EQ(std::get<std::string>(factor3->atom.value()->number.value().payload), "55");
+    EXPECT_FALSE(factor3->exponentiation.has_value());
+    EXPECT_FALSE(factor3->postfix_unary_expression.has_value());
+}
+
 TEST(CommonParserTests, Atom) {
     // number
     auto atom = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
