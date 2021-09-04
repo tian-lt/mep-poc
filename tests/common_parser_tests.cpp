@@ -24,12 +24,41 @@ TEST(CommonParserTests, SimpleExpression) {
 }
 
 TEST(CommonParserTests, Atom) {
+    // number
     auto atom = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
         mep::TokenStream<mep::RadixDecimal>("123"), mep::details::atom);
     EXPECT_EQ(std::get<std::string>(atom->number.value().payload), "123");
     EXPECT_EQ(atom->function, std::nullopt);
     EXPECT_EQ(atom->parenthesized, std::nullopt);
     EXPECT_EQ(atom->prefix_unary_expression, std::nullopt);
+
+    // parenthesized 
+    auto atom2 = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("(456)"), mep::details::atom);
+    EXPECT_EQ(std::get<std::string>(atom2->parenthesized.value()->expression->term.value()->factor.value()->atom.value()->number.value().payload), "456");
+    EXPECT_FALSE(atom2->parenthesized.value()->expression->addition.has_value());
+    EXPECT_FALSE(atom2->parenthesized.value()->expression->subtraction.has_value());
+    EXPECT_EQ(atom2->number, std::nullopt);
+    EXPECT_EQ(atom2->function, std::nullopt);
+    EXPECT_EQ(atom2->prefix_unary_expression, std::nullopt);
+
+    // function
+    auto atom3 = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("cos(180)"), mep::details::atom);
+    EXPECT_EQ(std::get<std::string>(atom3->function.value()->identifier.payload), "cos");
+    EXPECT_EQ(std::get<std::string>(atom3->function.value()->paramlist->expression->term.value()->factor.value()->atom.value()->number.value().payload), "180");
+    EXPECT_EQ(atom3->number, std::nullopt);
+    EXPECT_EQ(atom3->parenthesized, std::nullopt);
+    EXPECT_EQ(atom3->prefix_unary_expression, std::nullopt);
+
+    // prefix unary expression
+    auto atom4 = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("+5"), mep::details::atom);
+    EXPECT_EQ(std::get<std::string>(atom4->prefix_unary_expression.value()->plus_atom.value()->number.value().payload), "5");
+    EXPECT_FALSE(atom4->prefix_unary_expression.value()->minus_atom.has_value());
+    EXPECT_EQ(atom4->number, std::nullopt);
+    EXPECT_EQ(atom4->parenthesized, std::nullopt);
+    EXPECT_EQ(atom4->function, std::nullopt);
 }
 
 TEST(CommonParserTests, Parenthesized) {
@@ -59,6 +88,21 @@ TEST(CommonParserTests, Function) {
         mep::TokenStream<mep::RadixDecimal>("empty()"), mep::details::function);
     EXPECT_EQ(std::get<std::string>(function3->identifier.payload), "empty");
     EXPECT_TRUE(function3->paramlist->is_empty);
+}
+
+TEST(CommonParserTests, Exponentiation) {
+    auto exp = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1^2"), mep::details::exponentiation);
+    EXPECT_EQ(std::get<std::string>(exp->lhs->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(exp->rhs->number.value().payload), "2");
+    EXPECT_TRUE(exp->continued->is_empty);
+
+    auto exp2 = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1^2^3"), mep::details::exponentiation);
+    EXPECT_EQ(std::get<std::string>(exp2->lhs->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(exp2->rhs->number.value().payload), "2");
+    EXPECT_EQ(std::get<std::string>(exp2->continued->atom->number.value().payload), "3");
+    EXPECT_FALSE(exp2->continued->is_empty);
 }
 
 
