@@ -46,7 +46,7 @@ namespace mep::details {
     }
 
     template<class _T>
-    constexpr bool _match_first(const Token& t) {
+    constexpr bool _match_first(const Token&) {
         throw std::logic_error("not implemented");
     }
     template<>
@@ -575,7 +575,6 @@ namespace mep::details {
             restore(std::move(lat));
             return _mk_uptr(ast::Factor{ .atom = std::move(a) });
         }
-        throw ParserError();
     }
 
 

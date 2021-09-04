@@ -35,3 +35,9 @@ target_precompile_headers(mep
         <unordered_map>
         <vector>
 )
+
+if(MSVC)
+  target_compile_options(mep PRIVATE /W4 /WX)
+else()
+  target_compile_options(mep PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
