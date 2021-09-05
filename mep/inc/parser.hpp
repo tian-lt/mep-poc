@@ -162,7 +162,7 @@ namespace mep {
 
     struct ParserError : public std::runtime_error {
         ParserError() noexcept : std::runtime_error("error: failed to parse the token stream.") {}
-        explicit ParserError(std::string&& msg) noexcept : std::runtime_error(msg) {}
+        explicit ParserError(const std::string& msg) noexcept : std::runtime_error(msg) {}
         ParserError(const ParserError&) = delete;
         ParserError(ParserError&&) = default;
     };

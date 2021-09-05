@@ -2,7 +2,10 @@
 #define MEP_VISITOR_H
 
 #include <functional>
+#include <stdexcept>
 #include <string>
+#include <tuple>
+#include <vector>
 #include "lexer.hpp"
 
 namespace mep {
@@ -30,27 +33,140 @@ namespace mep {
     template<class _Tv, class _Tsrc>
     using number_f = std::function<_Tv(const _Tsrc& src)>;
 
-    template<class _Tv, class _Tsrc, class _ConvF>
-    _Tv eval_number(const _Tsrc& src, _ConvF&& convf) {
-        return std::forward<_ConvF>(convf)(src);
+    struct EvaluationError : public std::runtime_error{
+        EvaluationError() noexcept : std::runtime_error("failed to evaluate an ast node.") {}
+        explicit EvaluationError(const std::string& msg) noexcept : std::runtime_error(msg){}
+        EvaluationError(const EvaluationError&) = delete;
+        EvaluationError(EvaluationError&&) = default;
+    };
+    
+    template<class... _IntTs>
+    class Interpreter {
+    public:
+        Interpreter() {};
+        constexpr explicit Interpreter(_IntTs&&... ts)
+            : _ints(std::forward<_IntTs>(ts)...)
+        {}
+        Interpreter(const Interpreter&) = default;
+        Interpreter(Interpreter&&) = default;
+    public:
+        template<class _IntT>
+        void assign(_IntT&& intf) {
+            std::get<_IntT>(_ints) = std::forward<_IntT>(intf);
+        }
+        template<class _IntT>
+        const _IntT& interprets() const {
+            return std::get<_IntT>(_ints);
+        }
+    private:
+        std::tuple<_IntTs...> _ints;
+    };
+
+    template<class _Tv>
+    struct RequiredIntTypes {
+        using number_t = std::function<_Tv(const Token& tok)>;
+        using negative_t = std::function<_Tv(const _Tv& operand)>;
+        using positive_t = std::function<_Tv(const _Tv& operand)>;
+        using factorial_t = std::function<_Tv(const _Tv& operand)>;
+        using percent_t = std::function<_Tv(const _Tv& operand)>;
+        using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        using sub_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        using mul_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        using div_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        using pow_t = std::function<_Tv(const _Tv& base, const _Tv& exponent)>;
+        using func_t = std::function<_Tv(const std::string& identifier, const std::vector<_Tv>& params)>;
+    };
+
+    template<class _Tv>
+    using required_int_t = Interpreter<
+        typename RequiredIntTypes<_Tv>::number_t,
+        typename RequiredIntTypes<_Tv>::func_t
+    >;
+
+    template<class _Tv>
+    using function_call_t = std::function<_Tv(const std::vector<_Tv>&)>;
+
+    template<class _Tv>
+    class Evaluator {
+    public:
+        Evaluator(const required_int_t<_Tv>& ints)
+            : _ints(ints) {}
+        Evaluator(required_int_t<_Tv>&& ints)
+            : _ints(std::move(ints)) {}
+        _Tv eval_expression(const ast::Expression& expression) const;
+        _Tv eval_atom(const ast::Atom& atom) const;
+        _Tv eval_parenthesized(const ast::Parenthesized& parenthesized) const;
+        _Tv eval_prefix_unary_expression(const ast::PrefixUnaryExpression& prefix_unary_expression) const;
+        _Tv eval_function(const ast::Function& func) const;
+        _Tv eval_number(const Token& tok) const;
+        std::vector<_Tv> eval_paramlist(const ast::ParameterList& plist) const;
+    private:
+        required_int_t<_Tv> _ints;
+    };
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_expression(const ast::Expression& expression) const {
+        throw 0;
     }
 
-    template<class _Tv, class _ConvF>
-    _Tv eval_number(const Token& src, _ConvF&& convf) {
-        return std::forward<_ConvF>(convf)(src);
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_atom(const ast::Atom& atom) const{
+        if (atom.number.has_value()) {
+            return eval_number(atom.number.value());
+        }
+        else if (atom.parenthesized.has_value()) {
+            return eval_parenthesized(*(atom.parenthesized.value()));
+        }
+        else if (atom.function.has_value()) {
+            return eval_function(*(atom.function.value()));
+        }
+        else if (atom.prefix_unary_expression.has_value()) {
+        }
+        throw EvaluationError();
     }
 
-    template<class _Tv, class _Tsrc, class _ConvF>
-    _Tv eval_function(const ast::Function& func, _ConvF&& convf) {
-        return std::forward<_ConvF>(convf)(func.identifier, func.);
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_parenthesized(const ast::Parenthesized& parenthesized) const {
+        return eval_expression(*(parenthesized.expression));
     }
 
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_prefix_unary_expression(const ast::PrefixUnaryExpression& prefix_unary_expression) const {
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_function(const ast::Function& function) const {
+        auto params = eval_paramlist(*(function.paramlist));
+        auto funcname = std::get<std::string>(function.identifier.payload);
+        throw 0;
+    }
+
+    template<class _Tv>
+    inline std::vector<_Tv> Evaluator<_Tv>::eval_paramlist(const ast::ParameterList& params) const {
+        std::vector<_Tv> result;
+        ast::ContinuedParameterList* next = nullptr;
+        if (!params.is_empty) {
+            auto vexpr = eval_expression(*(params.expression));
+            result.emplace_back(std::move(vexpr));
+            next = params.continued.get();
+            while (!next->is_empty) {
+                vexpr = eval_expression(*(params.expression));
+                result.emplace_back(std::move(vexpr));
+                next = params.continued.get();
+            }
+        }
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_number(const Token& tok) const {
+        return _ints.interprets<RequiredIntTypes<_Tv>::number_t>()(tok);
+    }
 
     // utility converters
     inline double token_to_double_converter(const Token& t) {
         return std::stod(std::get<std::string>(t.payload));
     }
-
 } // namespace mep
 
 #endif // !MEP_VISITOR_H
