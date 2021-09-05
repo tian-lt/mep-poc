@@ -15,8 +15,11 @@ struct CommonEvaluatorTests : ::testing::Test {
 
     void SetUp() override {
         mep::required_int_t<double> ints(
-            mep::token_to_double_converter,
-            _TestFunc);
+            mep::token_to_double_converter, // number
+            mep::RequiredIntTypes<double>::positive_t([](const double& operand)->double {return operand; }), // positive
+            [](const double& operand)->double {return -operand; }, // negative
+            _TestFunc // function
+        );
         evaluator = std::make_unique<mep::Evaluator<double>>(std::move(ints));
     }
     std::unique_ptr<mep::Evaluator<double>> evaluator;
@@ -36,7 +39,27 @@ TEST_F(CommonEvaluatorTests, Function) {
 TEST_F(CommonEvaluatorTests, Number) {
     mep::Token tok{.token_type = mep::TokenType::DecimalFloat, .payload = std::string("123.456")};
     auto val = evaluator->eval_number(tok);
-    EXPECT_FLOAT_EQ(val, 123.456);
+    EXPECT_DOUBLE_EQ(val, 123.456);
+}
+
+TEST_F(CommonEvaluatorTests, Atom) {
+    // number
+    auto atom = MockParser<mep::ast::Atom, mep::RadixDecimal, decltype(mep::details::atom)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("123.45"), mep::details::atom);
+    auto val = evaluator->eval_atom(*atom);
+    EXPECT_DOUBLE_EQ(val, 123.45);
+}
+
+TEST_F(CommonEvaluatorTests, PrefixUnaryExpression) {
+    auto prefix = MockParser<mep::ast::PrefixUnaryExpression, mep::RadixDecimal, decltype(mep::details::prefix_unary_expression)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("+23"), mep::details::prefix_unary_expression);
+    auto val = evaluator->eval_prefix_unary_expression(*prefix);
+    EXPECT_DOUBLE_EQ(val, 23);
+
+    auto prefix2 = MockParser<mep::ast::PrefixUnaryExpression, mep::RadixDecimal, decltype(mep::details::prefix_unary_expression)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("-32"), mep::details::prefix_unary_expression);
+    auto val2 = evaluator->eval_prefix_unary_expression(*prefix2);
+    EXPECT_DOUBLE_EQ(val, -32);
 }
 
 

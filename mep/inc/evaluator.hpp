@@ -65,8 +65,11 @@ namespace mep {
     template<class _Tv>
     struct RequiredIntTypes {
         using number_t = std::function<_Tv(const Token& tok)>;
+        struct positive_t{
+            constexpr positive_t(std::function<_Tv(const _Tv& operand)> _f) : f(_f) {}
+            std::function<_Tv(const _Tv& operand)> f;
+        };
         using negative_t = std::function<_Tv(const _Tv& operand)>;
-        using positive_t = std::function<_Tv(const _Tv& operand)>;
         using factorial_t = std::function<_Tv(const _Tv& operand)>;
         using percent_t = std::function<_Tv(const _Tv& operand)>;
         using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
@@ -80,6 +83,8 @@ namespace mep {
     template<class _Tv>
     using required_int_t = Interpreter<
         typename RequiredIntTypes<_Tv>::number_t,
+        typename RequiredIntTypes<_Tv>::positive_t,
+        typename RequiredIntTypes<_Tv>::negative_t,
         typename RequiredIntTypes<_Tv>::func_t
     >;
 
@@ -132,6 +137,15 @@ namespace mep {
 
     template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_prefix_unary_expression(const ast::PrefixUnaryExpression& prefix_unary_expression) const {
+        if (prefix_unary_expression.minus_atom.has_value()) {
+            auto atom = eval_atom(*(prefix_unary_expression.minus_atom.value()));
+            return _ints.interprets<RequiredIntTypes<_Tv>::negative_t>()(atom);
+        }
+        else if (prefix_unary_expression.plus_atom.has_value()) {
+            auto atom = eval_atom(*(prefix_unary_expression.plus_atom.value()));
+            return _ints.interprets<RequiredIntTypes<_Tv>::positive_t>().f(atom);
+        }
+        throw EvaluationError();
     }
 
     template<class _Tv>
