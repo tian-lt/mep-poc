@@ -104,12 +104,12 @@ namespace mep::ast {
         otpl<uptr<Atom>, Token> atom_operator;
     };
     struct Exponentiation {
-        uptr<Atom> lhs;
-        uptr<Atom> rhs;
+        uptr<Atom> base;
+        uptr<Atom> exponent;
         uptr<ContinuedExponentiation> continued;
     };
     struct ContinuedExponentiation {
-        uptr<Atom> atom;
+        uptr<Atom> exponent;
         uptr<ContinuedExponentiation> continued;
         bool is_empty;
     };

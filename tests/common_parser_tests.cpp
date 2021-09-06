@@ -101,8 +101,8 @@ TEST(CommonParserTests, Factor) {
     // exponentiation
     auto factor2 = MockParser<mep::ast::Factor, mep::RadixDecimal, decltype(mep::details::factor)>::parse_proxy(
         mep::TokenStream<mep::RadixDecimal>("6^7"), mep::details::factor);
-    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->lhs->number.value().payload), "6");
-    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->rhs->number.value().payload), "7");
+    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->base->number.value().payload), "6");
+    EXPECT_EQ(std::get<std::string>(factor2->exponentiation.value()->exponent->number.value().payload), "7");
     EXPECT_FALSE(factor2->atom.has_value());
     EXPECT_FALSE(factor2->postfix_unary_expression.has_value());
 
@@ -184,15 +184,15 @@ TEST(CommonParserTests, Function) {
 TEST(CommonParserTests, Exponentiation) {
     auto exp = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
         mep::TokenStream<mep::RadixDecimal>("1^2"), mep::details::exponentiation);
-    EXPECT_EQ(std::get<std::string>(exp->lhs->number.value().payload), "1");
-    EXPECT_EQ(std::get<std::string>(exp->rhs->number.value().payload), "2");
+    EXPECT_EQ(std::get<std::string>(exp->base->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(exp->exponent->number.value().payload), "2");
     EXPECT_TRUE(exp->continued->is_empty);
 
     auto exp2 = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
         mep::TokenStream<mep::RadixDecimal>("1^2^3"), mep::details::exponentiation);
-    EXPECT_EQ(std::get<std::string>(exp2->lhs->number.value().payload), "1");
-    EXPECT_EQ(std::get<std::string>(exp2->rhs->number.value().payload), "2");
-    EXPECT_EQ(std::get<std::string>(exp2->continued->atom->number.value().payload), "3");
+    EXPECT_EQ(std::get<std::string>(exp2->base->number.value().payload), "1");
+    EXPECT_EQ(std::get<std::string>(exp2->exponent->number.value().payload), "2");
+    EXPECT_EQ(std::get<std::string>(exp2->continued->exponent->number.value().payload), "3");
     EXPECT_FALSE(exp2->continued->is_empty);
 }
 

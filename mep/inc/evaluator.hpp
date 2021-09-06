@@ -48,7 +48,7 @@ namespace mep {
             : _ints(std::forward<_IntTs>(ts)...)
         {}
         Interpreter(const Interpreter&) = default;
-        Interpreter(Interpreter&&) = default;
+        Interpreter(Interpreter&&) noexcept = default;
     public:
         template<class _IntT>
         void assign(_IntT&& intf) {
@@ -64,20 +64,33 @@ namespace mep {
 
     template<class _Tv>
     struct RequiredIntTypes {
-        using number_t = std::function<_Tv(const Token& tok)>;
-        struct positive_t{
-            constexpr positive_t(std::function<_Tv(const _Tv& operand)> _f) : f(_f) {}
-            std::function<_Tv(const _Tv& operand)> f;
+        struct number_t{
+            constexpr number_t(std::function<_Tv(const Token& tok)> f) : invoke(f) {}
+            const std::function<_Tv(const Token& tok)> invoke;
         };
-        using negative_t = std::function<_Tv(const _Tv& operand)>;
-        using factorial_t = std::function<_Tv(const _Tv& operand)>;
-        using percent_t = std::function<_Tv(const _Tv& operand)>;
-        using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        using sub_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        using mul_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        using div_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        using pow_t = std::function<_Tv(const _Tv& base, const _Tv& exponent)>;
-        using func_t = std::function<_Tv(const std::string& identifier, const std::vector<_Tv>& params)>;
+        struct positive_t{
+            constexpr positive_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& operand)> invoke;
+        };
+        struct negative_t{
+            constexpr negative_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& operand)> invoke;
+        };
+        //using factorial_t = std::function<_Tv(const _Tv& operand)>;
+        //using percent_t = std::function<_Tv(const _Tv& operand)>;
+        //using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        //using sub_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        //using mul_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        //using div_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
+        //using pow_t = std::function<_Tv(const _Tv& base, const _Tv& exponent)>;
+        struct pow_t {
+            constexpr pow_t(std::function<_Tv(const _Tv& base, const _Tv& exponent)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& base, const _Tv& exponent)> invoke;
+        };
+        struct func_t {
+            constexpr func_t(std::function<_Tv(const std::string& identifier, const std::vector<_Tv>& params)> f) : invoke(f) {}
+            const std::function<_Tv(const std::string& identifier, const std::vector<_Tv>& params)> invoke;
+        };
     };
 
     template<class _Tv>
@@ -85,6 +98,7 @@ namespace mep {
         typename RequiredIntTypes<_Tv>::number_t,
         typename RequiredIntTypes<_Tv>::positive_t,
         typename RequiredIntTypes<_Tv>::negative_t,
+        typename RequiredIntTypes<_Tv>::pow_t,
         typename RequiredIntTypes<_Tv>::func_t
     >;
 
@@ -100,6 +114,7 @@ namespace mep {
             : _ints(std::move(ints)) {}
         _Tv eval_expression(const ast::Expression& expression) const;
         _Tv eval_atom(const ast::Atom& atom) const;
+        _Tv eval_exponentiation(const ast::Exponentiation& exponentiation) const;
         _Tv eval_parenthesized(const ast::Parenthesized& parenthesized) const;
         _Tv eval_prefix_unary_expression(const ast::PrefixUnaryExpression& prefix_unary_expression) const;
         _Tv eval_function(const ast::Function& func) const;
@@ -131,6 +146,20 @@ namespace mep {
     }
 
     template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_exponentiation(const ast::Exponentiation& exponentiation) const {
+        _Tv result = _ints.interprets<RequiredIntTypes<_Tv>::pow_t>().invoke(
+            eval_atom(*exponentiation.base),
+            eval_atom(*exponentiation.exponent));
+        ast::ContinuedExponentiation* next = exponentiation.continued.get();
+        while (!next->is_empty) {
+            result = _ints.interprets<RequiredIntTypes<_Tv>::pow_t>().invoke(
+                result,
+                eval_atom(*next->exponent));
+        }
+        return result;
+    }
+
+    template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_parenthesized(const ast::Parenthesized& parenthesized) const {
         return eval_expression(*(parenthesized.expression));
     }
@@ -139,11 +168,11 @@ namespace mep {
     inline _Tv Evaluator<_Tv>::eval_prefix_unary_expression(const ast::PrefixUnaryExpression& prefix_unary_expression) const {
         if (prefix_unary_expression.minus_atom.has_value()) {
             auto atom = eval_atom(*(prefix_unary_expression.minus_atom.value()));
-            return _ints.interprets<RequiredIntTypes<_Tv>::negative_t>()(atom);
+            return _ints.interprets<RequiredIntTypes<_Tv>::negative_t>().invoke(atom);
         }
         else if (prefix_unary_expression.plus_atom.has_value()) {
             auto atom = eval_atom(*(prefix_unary_expression.plus_atom.value()));
-            return _ints.interprets<RequiredIntTypes<_Tv>::positive_t>().f(atom);
+            return _ints.interprets<RequiredIntTypes<_Tv>::positive_t>().invoke(atom);
         }
         throw EvaluationError();
     }
@@ -152,7 +181,7 @@ namespace mep {
     inline _Tv Evaluator<_Tv>::eval_function(const ast::Function& function) const {
         auto params = eval_paramlist(*(function.paramlist));
         auto funcname = std::get<std::string>(function.identifier.payload);
-        throw 0;
+        return _ints.interprets<RequiredIntTypes<_Tv>::func_t>().invoke(funcname, params);
     }
 
     template<class _Tv>
@@ -174,7 +203,7 @@ namespace mep {
 
     template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_number(const Token& tok) const {
-        return _ints.interprets<RequiredIntTypes<_Tv>::number_t>()(tok);
+        return _ints.interprets<RequiredIntTypes<_Tv>::number_t>().invoke(tok);
     }
 
     // utility converters

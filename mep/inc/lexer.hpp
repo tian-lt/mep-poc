@@ -101,7 +101,7 @@ namespace mep {
         // TODO: in future, we can replace below std::regex with built-in NFA/DFAs
         // to speed up the process of lexeme recognition
         inline const std::regex decimal_number("^[0-9]+");
-        inline const std::regex decimal_float("^([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.)");
+        inline const std::regex decimal_float("^(([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.))");
         inline const std::regex decimal_scientific_number("^(([0-9]+)|([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+\\.))e(\\+|-)?[0-9]+");
         inline const std::regex whitespaces("^\\s+");
         inline const std::regex identifier("^([a-zA-Z][0-9a-zA-Z]*)");

@@ -648,10 +648,12 @@ namespace mep::details {
         Token caret = next();
         _expect(caret, TokenType::Caret);
         auto rhs = atom(next, restore, kac);
+        _expect(rhs);
         auto con = continued_exponentiation(next, restore, kac);
+        _expect(con);
         return _mk_uptr(ast::Exponentiation{
-            .lhs = std::move(lhs),
-            .rhs = std::move(rhs),
+            .base = std::move(lhs),
+            .exponent = std::move(rhs),
             .continued = std::move(con) });
     }
 
@@ -667,7 +669,7 @@ namespace mep::details {
             auto con = continued_exponentiation(next, restore, kac);
             _expect(con);
             return _mk_uptr(ast::ContinuedExponentiation{
-                .atom = std::move(a),
+                .exponent = std::move(a),
                 .continued = std::move(con),
                 .is_empty = false });
         }

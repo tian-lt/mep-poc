@@ -15,10 +15,11 @@ struct CommonEvaluatorTests : ::testing::Test {
 
     void SetUp() override {
         mep::required_int_t<double> ints(
-            mep::token_to_double_converter, // number
-            mep::RequiredIntTypes<double>::positive_t([](const double& operand)->double {return operand; }), // positive
-            [](const double& operand)->double {return -operand; }, // negative
-            _TestFunc // function
+            mep::RequiredIntTypes<double>::number_t(mep::token_to_double_converter),
+            mep::RequiredIntTypes<double>::positive_t([](const double& operand){ return operand; }),
+            mep::RequiredIntTypes<double>::negative_t([](const double& operand){ return -operand; }),
+            mep::RequiredIntTypes<double>::pow_t([](const double& base, const double& exp){ return std::pow(base, exp); }),
+            mep::RequiredIntTypes<double>::func_t(_TestFunc)
         );
         evaluator = std::make_unique<mep::Evaluator<double>>(std::move(ints));
     }
@@ -27,6 +28,18 @@ struct CommonEvaluatorTests : ::testing::Test {
 
 TEST_F(CommonEvaluatorTests, Addition) {
 
+}
+
+TEST_F(CommonEvaluatorTests, Exponentiation) {
+    auto exp = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("2^3"), mep::details::exponentiation);
+    auto val = evaluator->eval_exponentiation(*exp);
+    EXPECT_DOUBLE_EQ(val, 8.0);
+
+    auto exp2 = MockParser<mep::ast::Exponentiation, mep::RadixDecimal, decltype(mep::details::exponentiation)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("4^0.5"), mep::details::exponentiation);
+    auto val2 = evaluator->eval_exponentiation(*exp2);
+    EXPECT_DOUBLE_EQ(val2, 2.0);
 }
 
 TEST_F(CommonEvaluatorTests, Function) {
@@ -59,7 +72,7 @@ TEST_F(CommonEvaluatorTests, PrefixUnaryExpression) {
     auto prefix2 = MockParser<mep::ast::PrefixUnaryExpression, mep::RadixDecimal, decltype(mep::details::prefix_unary_expression)>::parse_proxy(
         mep::TokenStream<mep::RadixDecimal>("-32"), mep::details::prefix_unary_expression);
     auto val2 = evaluator->eval_prefix_unary_expression(*prefix2);
-    EXPECT_DOUBLE_EQ(val, -32);
+    EXPECT_DOUBLE_EQ(val2, -32);
 }
 
 
