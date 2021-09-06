@@ -74,7 +74,7 @@ namespace mep::ast {
     struct Division {
         uptr<Factor> lhs;
         uptr<Factor> rhs;
-        ouptr<ContinuedMultiplicationOrDivision> continued;
+        uptr<ContinuedMultiplicationOrDivision> continued;
     };
     struct MultiplicationSignOmitted {
         otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;

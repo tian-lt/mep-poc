@@ -604,8 +604,12 @@ namespace mep::details {
             throw ParserError();
         }
         else {
+            auto a = atom(next, restore, kac);
+            _expect(a);
             Token lat = next(); // look ahead token
-            if (_match_first<ast::Exponentiation>(lat)) {
+            if (_choose(lat, TokenType::Caret)) {
+                // exponentiation
+                kac.push(std::move(a));
                 restore(std::move(lat));
                 auto e = exponentiation(next, restore, kac);
                 _expect(e);
@@ -615,19 +619,13 @@ namespace mep::details {
                     return _mk_uptr(ast::PostfixUnaryExpression{
                         .power = _mk_otpl(std::move(e), std::move(operator_token)) });
                 }
-                throw ParserError();
             }
-            else if (_match_first<ast::Atom>(lat)) {
-                restore(std::move(lat));
-                auto a = atom(next, restore, kac);
-                _expect(a);
-                Token operator_token = next();
-                if (_choose(operator_token, TokenType::Factorial)
-                    || _choose(operator_token, TokenType::Percent)) {
+            else {
+                if (_choose(lat, TokenType::Factorial)
+                    || _choose(lat, TokenType::Percent)) {
                     return _mk_uptr(ast::PostfixUnaryExpression{
-                        .atom_operator = _mk_otpl(std::move(a), std::move(operator_token)) });
+                        .atom_operator = _mk_otpl(std::move(a), std::move(lat)) });
                 }
-                throw ParserError();
             }
             throw ParserError();
         }

@@ -9,37 +9,13 @@
 #include "lexer.hpp"
 
 namespace mep {
-    // converters
-    template<class _Tv>
-    using add_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using sub_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using mul_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using div_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using factorial_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using percent_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using pow_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using positive_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using negative_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv>
-    using function_f = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-    template<class _Tv, class _Tsrc>
-    using number_f = std::function<_Tv(const _Tsrc& src)>;
-
-    struct EvaluationError : public std::runtime_error{
+    struct EvaluationError : public std::runtime_error {
         EvaluationError() noexcept : std::runtime_error("failed to evaluate an ast node.") {}
-        explicit EvaluationError(const std::string& msg) noexcept : std::runtime_error(msg){}
+        explicit EvaluationError(const std::string& msg) noexcept : std::runtime_error(msg) {}
         EvaluationError(const EvaluationError&) = delete;
         EvaluationError(EvaluationError&&) = default;
     };
-    
+
     template<class... _IntTs>
     class Interpreter {
     public:
@@ -64,28 +40,40 @@ namespace mep {
 
     template<class _Tv>
     struct RequiredIntTypes {
-        struct number_t{
+        struct number_t {
             constexpr number_t(std::function<_Tv(const Token& tok)> f) : invoke(f) {}
             const std::function<_Tv(const Token& tok)> invoke;
         };
-        struct positive_t{
+        struct positive_t {
             constexpr positive_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& operand)> invoke;
         };
-        struct negative_t{
+        struct negative_t {
             constexpr negative_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& operand)> invoke;
         };
-        //using factorial_t = std::function<_Tv(const _Tv& operand)>;
-        //using percent_t = std::function<_Tv(const _Tv& operand)>;
+        struct mul_t{
+            constexpr mul_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
+        };
+        struct div_t{
+            constexpr div_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
+        };
         //using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
         //using sub_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        //using mul_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        //using div_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
         //using pow_t = std::function<_Tv(const _Tv& base, const _Tv& exponent)>;
         struct pow_t {
             constexpr pow_t(std::function<_Tv(const _Tv& base, const _Tv& exponent)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& base, const _Tv& exponent)> invoke;
+        };
+        struct percent_t {
+            constexpr percent_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& operand)> invoke;
+        };
+        struct factorial_t {
+            constexpr factorial_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& operand)> invoke;
         };
         struct func_t {
             constexpr func_t(std::function<_Tv(const std::string& identifier, const std::vector<_Tv>& params)> f) : invoke(f) {}
@@ -98,7 +86,11 @@ namespace mep {
         typename RequiredIntTypes<_Tv>::number_t,
         typename RequiredIntTypes<_Tv>::positive_t,
         typename RequiredIntTypes<_Tv>::negative_t,
+        typename RequiredIntTypes<_Tv>::mul_t,
+        typename RequiredIntTypes<_Tv>::div_t,
         typename RequiredIntTypes<_Tv>::pow_t,
+        typename RequiredIntTypes<_Tv>::percent_t,
+        typename RequiredIntTypes<_Tv>::factorial_t,
         typename RequiredIntTypes<_Tv>::func_t
     >;
 
@@ -113,6 +105,10 @@ namespace mep {
         Evaluator(required_int_t<_Tv>&& ints)
             : _ints(std::move(ints)) {}
         _Tv eval_expression(const ast::Expression& expression) const;
+        _Tv eval_multiplication(const ast::Multiplication& multiplication) const;
+        _Tv eval_division(const ast::Division& division) const;
+        _Tv eval_factor(const ast::Factor& factor) const;
+        _Tv eval_postfix_unary_expression(const ast::PostfixUnaryExpression& postfix_unary_expression) const;
         _Tv eval_atom(const ast::Atom& atom) const;
         _Tv eval_exponentiation(const ast::Exponentiation& exponentiation) const;
         _Tv eval_parenthesized(const ast::Parenthesized& parenthesized) const;
@@ -127,6 +123,60 @@ namespace mep {
     template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_expression(const ast::Expression& expression) const {
         throw 0;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_division(const ast::Division& division) const {
+        _Tv result = _ints.interprets<RequiredIntTypes<_Tv>::div_t>().invoke(
+            eval_factor(*division.lhs),
+            eval_factor(*division.rhs));
+        ast::ContinuedMultiplicationOrDivision* next = division.continued.get();
+        while (!next->is_empty) {
+            if (next->div_continued.has_value()) {
+                auto rhs = eval_factor(*std::get<std::unique_ptr<ast::Factor>>(next->div_continued.value()));
+                result = _ints.interprets<RequiredIntTypes<_Tv>::div_t>().invoke(result, rhs);
+                next = std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(next->div_continued.value()).get();
+            }
+        }
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_factor(const ast::Factor& factor) const {
+        if (factor.atom.has_value()) {
+            return eval_atom(*factor.atom.value());
+        }
+        else if (factor.exponentiation.has_value()) {
+            return eval_exponentiation(*factor.exponentiation.value());
+        }
+        else if (factor.postfix_unary_expression.has_value()) {
+            return eval_postfix_unary_expression(*factor.postfix_unary_expression.value());
+        }
+        throw EvaluationError();
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_postfix_unary_expression(const ast::PostfixUnaryExpression& postfix_unary_expression) const {
+        if (postfix_unary_expression.atom_operator.has_value()) {
+            auto operand = eval_atom(*(std::get<std::unique_ptr<ast::Atom>>(postfix_unary_expression.atom_operator.value())));
+            if (std::get<Token>(postfix_unary_expression.atom_operator.value()).token_type == TokenType::Percent) {
+                return _ints.interprets<RequiredIntTypes<_Tv>::percent_t>().invoke(operand);
+            }
+            else if (std::get<Token>(postfix_unary_expression.atom_operator.value()).token_type == TokenType::Factorial) {
+                return _ints.interprets<RequiredIntTypes<_Tv>::factorial_t>().invoke(operand);
+            }
+            throw EvaluationError();
+        }
+        if (postfix_unary_expression.power.has_value()) {
+            auto exp = eval_exponentiation(*(std::get<std::unique_ptr<ast::Exponentiation>>(postfix_unary_expression.power.value())));
+            if (std::get<Token>(postfix_unary_expression.power.value()).token_type == TokenType::Percent) {
+                return _ints.interprets<RequiredIntTypes<_Tv>::percent_t>().invoke(exp);
+            }
+            else if(std::get<Token>(postfix_unary_expression.power.value()).token_type == TokenType::Factorial){
+                return _ints.interprets<RequiredIntTypes<_Tv>::factorial_t>().invoke(exp);
+            }
+        }
+        throw EvaluationError();
     }
 
     template<class _Tv>
