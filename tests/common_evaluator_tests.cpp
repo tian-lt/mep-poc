@@ -43,6 +43,18 @@ struct CommonEvaluatorTests : ::testing::Test {
 TEST_F(CommonEvaluatorTests, Addition) {
 }
 
+TEST_F(CommonEvaluatorTests, Division) {
+    auto div = MockParser<mep::ast::Division, mep::RadixDecimal, decltype(mep::details::division)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("12.3/4.56"), mep::details::division);
+    auto val = evaluator->eval_division(*div);
+    EXPECT_DOUBLE_EQ(val, 2.69736842105263157894);
+
+    auto div2 = MockParser<mep::ast::Division, mep::RadixDecimal, decltype(mep::details::division)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("12.3/4.56/2.2"), mep::details::division);
+    auto val2 = evaluator->eval_division(*div2);
+    EXPECT_DOUBLE_EQ(val2, 1.22607655502392344497);
+}
+
 TEST_F(CommonEvaluatorTests, Factor) {
     // number
     auto factor = MockParser<mep::ast::Factor, mep::RadixDecimal, decltype(mep::details::factor)>::parse_proxy(

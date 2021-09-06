@@ -107,6 +107,8 @@ namespace mep {
         _Tv eval_expression(const ast::Expression& expression) const;
         _Tv eval_multiplication(const ast::Multiplication& multiplication) const;
         _Tv eval_division(const ast::Division& division) const;
+        _Tv eval_multiplication_sign_omitted(const ast::MultiplicationSignOmitted& mso) const;
+        _Tv eval_continued_multiplication_or_division(const _Tv& lhs, const ast::ContinuedMultiplicationOrDivision& rhs) const;
         _Tv eval_factor(const ast::Factor& factor) const;
         _Tv eval_postfix_unary_expression(const ast::PostfixUnaryExpression& postfix_unary_expression) const;
         _Tv eval_atom(const ast::Atom& atom) const;
@@ -126,16 +128,65 @@ namespace mep {
     }
 
     template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_multiplication(const ast::Multiplication& multiplication) const {
+        if (multiplication.lhs.has_value() && multiplication.rhs.has_value() && multiplication.continued.has_value()) {
+            auto result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(
+                eval_factor(*multiplication.lhs.value()),
+                eval_factor(*multiplication.rhs.value()));
+            return eval_continued_multiplication_or_division(result, *multiplication.continued);
+        }
+        else if (multiplication.omitted.has_value()) {
+            return eval_multiplication_sign_omitted(*multiplication.omitted.value());
+        }
+        throw EvaluationError();
+    }
+
+    template<class _Tv>
+    _Tv Evaluator<_Tv>::eval_multiplication_sign_omitted(const ast::MultiplicationSignOmitted& mso) const{
+        if (mso.factor_parenthesized.has_value()) {
+
+        }
+        else if (mso.factor_function.has_value()) {
+
+        }
+        throw EvaluationError();
+    }
+
+    template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_division(const ast::Division& division) const {
         _Tv result = _ints.interprets<RequiredIntTypes<_Tv>::div_t>().invoke(
             eval_factor(*division.lhs),
             eval_factor(*division.rhs));
-        ast::ContinuedMultiplicationOrDivision* next = division.continued.get();
+        result = eval_continued_multiplication_or_division(result, *division.continued);
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_continued_multiplication_or_division(const _Tv& lhs, const ast::ContinuedMultiplicationOrDivision& rhs) const {
+        _Tv result = lhs;
+        const ast::ContinuedMultiplicationOrDivision* next = &rhs;
         while (!next->is_empty) {
-            if (next->div_continued.has_value()) {
+            if(next->mul_continued.has_value()){
+                auto rhs = eval_factor(*std::get<std::unique_ptr<ast::Factor>>(next->mul_continued.value()));
+                result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(result, rhs);
+                next = std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(next->mul_continued.value()).get();
+            }
+            else if (next->div_continued.has_value()) {
                 auto rhs = eval_factor(*std::get<std::unique_ptr<ast::Factor>>(next->div_continued.value()));
                 result = _ints.interprets<RequiredIntTypes<_Tv>::div_t>().invoke(result, rhs);
                 next = std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(next->div_continued.value()).get();
+            }
+            else if (next->mo_continued.has_value()) {
+                if (next->mo_continued.value()->parenthesized_continued.has_value()) { // parenthesized continued
+                    auto rhs = eval_parenthesized(*std::get<std::unique_ptr<ast::Parenthesized>>(next->mo_continued.value()->parenthesized_continued.value()));
+                    result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(result, rhs);
+                    next = std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(next->mo_continued.value()->parenthesized_continued.value()).get();
+                }
+                else { // function continued
+                    auto rhs = eval_function(*std::get<std::unique_ptr<ast::Function>>(next->mo_continued.value()->function_continued.value()));
+                    result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(result, rhs);
+                    next = std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(next->mo_continued.value()->function_continued.value()).get();
+                }
             }
         }
         return result;

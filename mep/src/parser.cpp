@@ -343,9 +343,15 @@ namespace mep::details {
     <division> ::= <factor> "/" <factor> <continued_multiplication_or_division>
     ************************************************************** */
     std::unique_ptr<ast::Division> division(const next_f& next, const restore_f& restore, kac_t& kac) {
-        // we expects that the firt term has been parsed by the upstream process - term().
-        _expect(kac.has_item<std::unique_ptr<ast::Factor>>());
-        auto lhs = kac.pop<std::unique_ptr<ast::Factor>>();
+        std::unique_ptr<ast::Factor> lhs;
+        if (kac.has_item<std::unique_ptr<ast::Factor>>()) {
+            // we expects that the firt term has been parsed by the upstream process - term().
+            lhs = kac.pop<std::unique_ptr<ast::Factor>>();
+        }
+        else {
+            lhs = factor(next, restore, kac);
+        }
+        _expect(lhs);
         auto div_token = next();
         _expect(div_token, TokenType::Divide);
         auto rhs = factor(next, restore, kac);
@@ -366,91 +372,30 @@ namespace mep::details {
         | <function> <parenthesized> <continued_multiplication_or_division>
     ************************************************************** */
     std::unique_ptr<ast::MultiplicationSignOmitted> multiplication_sign_omitted(const next_f& next, const restore_f& restore, kac_t& kac) {
-        if (kac.has_item<std::unique_ptr<ast::Factor>>()) {
-            // we expects that the firt factor has been parsed by the upstream process - multiplication().
-            auto lhs = kac.pop<std::unique_ptr<ast::Factor>>();
-            _expect(lhs);
-            Token lat = next(); // look ahead token
-            if (_match_first<ast::Parenthesized>(lat)) {
-                // factor parenthesized con
-                restore(std::move(lat));
-                auto rhs = parenthesized(next, restore, kac);
-                _expect(rhs);
-                auto con = continued_multiplication_or_division(next, restore, kac);
-                return _mk_uptr(ast::MultiplicationSignOmitted{
-                    .factor_parenthesized = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-            }
-            else if (_match_first<ast::Function>(lat)) {
-                // factor function con
-                restore(std::move(lat));
-                auto rhs = function(next, restore, kac);
-                _expect(rhs);
-                auto con = continued_multiplication_or_division(next, restore, kac);
-                return _mk_uptr(ast::MultiplicationSignOmitted{
-                    .factor_function = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-            }
-            throw ParserError();
+        // we expects that the firt factor has been parsed by the upstream process - multiplication().
+        _expect(kac.has_item<std::unique_ptr<ast::Factor>>());
+        auto lhs = kac.pop<std::unique_ptr<ast::Factor>>();
+        _expect(lhs);
+        Token lat = next(); // look ahead token
+        if (_match_first<ast::Parenthesized>(lat)) {
+            // factor parenthesized con
+            restore(std::move(lat));
+            auto rhs = parenthesized(next, restore, kac);
+            _expect(rhs);
+            auto con = continued_multiplication_or_division(next, restore, kac);
+            return _mk_uptr(ast::MultiplicationSignOmitted{
+                .factor_parenthesized = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
         }
-        else {
-            // Multiplication/MultiplicationSignOmitted/parenthesized ...
-            // Multiplication/MultiplicationSignOmitted/function ...
-            Token lat = next(); // look ahead token
-            if (_match_first<ast::Parenthesized>(lat)) {
-                // parenthesized ...
-                restore(std::move(lat));
-                auto lhs = parenthesized(next, restore, kac);
-                _expect(lhs);
-                lat = next();
-                if (_match_first<ast::Parenthesized>(lat)) {
-                    // parenthesized parenthesized 
-                    restore(std::move(lat));
-                    auto rhs = parenthesized(next, restore, kac);
-                    _expect(rhs);
-                    auto con = continued_multiplication_or_division(next, restore, kac);
-                    _expect(con);
-                    return _mk_uptr(ast::MultiplicationSignOmitted{
-                        .parenthesized_parenthesized = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-                }
-                else if (_match_first<ast::Function>(lat)) {
-                    // parenthesized function 
-                    restore(std::move(lat));
-                    auto rhs = function(next, restore, kac);
-                    _expect(rhs);
-                    auto con = continued_multiplication_or_division(next, restore, kac);
-                    _expect(con);
-                    return _mk_uptr(ast::MultiplicationSignOmitted{
-                        .parenthesized_function = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-                }
-            }
-            else if (_match_first<ast::Function>(lat)) {
-                // function ...
-                restore(std::move(lat));
-                auto lhs = function(next, restore, kac);
-                _expect(lhs);
-                lat = next();
-                if (_match_first<ast::Function>(lat)) {
-                    // function function
-                    restore(std::move(lat));
-                    auto rhs = function(next, restore, kac);
-                    _expect(rhs);
-                    auto con = continued_multiplication_or_division(next, restore, kac);
-                    _expect(con);
-                    return _mk_uptr(ast::MultiplicationSignOmitted{
-                        .function_function = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-                }
-                else if (_match_first<ast::Parenthesized>(lat)) {
-                    // function parenthesized 
-                    restore(std::move(lat));
-                    auto rhs = parenthesized(next, restore, kac);
-                    _expect(rhs);
-                    auto con = continued_multiplication_or_division(next, restore, kac);
-                    _expect(con);
-                    return _mk_uptr(ast::MultiplicationSignOmitted{
-                        .function_parenthesized = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
-                }
-            }
-            throw ParserError();
+        else if (_match_first<ast::Function>(lat)) {
+            // factor function con
+            restore(std::move(lat));
+            auto rhs = function(next, restore, kac);
+            _expect(rhs);
+            auto con = continued_multiplication_or_division(next, restore, kac);
+            return _mk_uptr(ast::MultiplicationSignOmitted{
+                .factor_function = _mk_otpl(std::move(lhs), std::move(rhs), std::move(con)) });
         }
+        throw ParserError();
     }
 
     /* **************************************************************

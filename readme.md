@@ -61,10 +61,6 @@ Operator precedence
 multiplication_sign_omitted ::=
       <factor> <parenthesized> <continued_multiplication_or_division>
    	| <factor> <function> <continued_multiplication_or_division>
-	| <parenthesized> <parenthesized> <continued_multiplication_or_division>
-	| <parenthesized> <function> <continued_multiplication_or_division>
-   	| <function> <function> <continued_multiplication_or_division>
-   	| <function> <parenthesized> <continued_multiplication_or_division>
 
 <division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
 

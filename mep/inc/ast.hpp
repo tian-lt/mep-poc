@@ -79,20 +79,16 @@ namespace mep::ast {
     struct MultiplicationSignOmitted {
         otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;
         otpl<uptr<Factor>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> factor_function;
-        otpl<uptr<Parenthesized>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_parenthesized;
-        otpl<uptr<Parenthesized>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_function;
-        otpl<uptr<Function>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> function_function;
-        otpl<uptr<Function>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> function_parenthesized;
     };
     struct ContinuedMultiplicationOrDivision {
-        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul
-        otpl<uptr<Factor>, ouptr<ContinuedMultiplicationOrDivision>> div_continued; // Div
+        otpl<uptr<Factor>, uptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul
+        otpl<uptr<Factor>, uptr<ContinuedMultiplicationOrDivision>> div_continued; // Div
         ouptr<ContinuedMultiplicationSignOmitted> mo_continued;
         bool is_empty;
     };
     struct ContinuedMultiplicationSignOmitted {
-        otpl<uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> parenthesized_continued;
-        otpl<uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> function_continued;
+        otpl<uptr<Parenthesized>, uptr<ContinuedMultiplicationOrDivision>> parenthesized_continued;
+        otpl<uptr<Function>, uptr<ContinuedMultiplicationOrDivision>> function_continued;
     };
     struct Factor {
         ouptr<PostfixUnaryExpression> postfix_unary_expression;
