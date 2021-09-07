@@ -7,7 +7,7 @@
 
 #include "lexer.hpp"
 
-namespace mep::ast {
+namespace aep::ast {
     template <class _T>
     using uptr = std::unique_ptr<_T>;
     template <class _T>
@@ -136,6 +136,6 @@ namespace mep::ast {
         uptr<ContinuedParameterList> continued;
         bool is_empty;
     };
-} // namespace mep::ast
+} // namespace aep::ast
 
 #endif // !MEP_AST_H

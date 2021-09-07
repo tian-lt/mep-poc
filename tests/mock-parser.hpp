@@ -4,12 +4,12 @@
 
 template<class _ASTType, class _RadixType, class ParseFuncT>
 struct MockParser {
-    static inline std::unique_ptr<_ASTType> parse_proxy(mep::TokenStream<_RadixType>&& stream, ParseFuncT parsef) {
-        std::stack<mep::Token> hold;
-        mep::details::kac_t kac;
+    static inline std::unique_ptr<_ASTType> parse_proxy(aep::TokenStream<_RadixType>&& stream, ParseFuncT parsef) {
+        std::stack<aep::Token> hold;
+        aep::details::kac_t kac;
         return parsef([&]() {
                 if (hold.size() > 0) {
-                    mep::Token retval = hold.top();
+                    aep::Token retval = hold.top();
                     hold.pop();
                     return retval;
                 }
@@ -17,7 +17,7 @@ struct MockParser {
                     return stream.next();
                 }
             },
-            [&](mep::Token&& t) {
+            [&](aep::Token&& t) {
                 hold.emplace(std::move(t));
             },
             kac);

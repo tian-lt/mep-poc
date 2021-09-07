@@ -1,7 +1,7 @@
 #include <set>
 #include "parser.hpp"
 
-namespace mep::details {
+namespace aep::details {
     template<class _T>
     bool _choose(const std::unique_ptr<_T>& opt) {
         return opt != nullptr;

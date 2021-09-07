@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace mep {
+namespace aep {
     enum class TokenType {
         None = 0,
         // operators

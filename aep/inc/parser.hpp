@@ -12,7 +12,7 @@
 #include "lexer.hpp"
 
 /*
-# mep poc expression grammar specification
+# aep poc expression grammar specification
 
 <expression> ::= <addition>
                | <subtraction>
@@ -36,8 +36,6 @@
 multiplication_sign_omitted ::=
       <factor> <parenthesized> <continued_multiplication_or_division>
    	| <factor> <function> <continued_multiplication_or_division>
-	| <parenthesized> <parenthesized> <continued_multiplication_or_division>
-   	| <function> <function> <continued_multiplication_or_division>
 
 <division> ::= <dividend> "/" <divisor> <continued_multiplication_or_division>
 
@@ -86,7 +84,7 @@ multiplication_sign_omitted ::=
                              | <empty>
 */
 
-namespace mep {
+namespace aep {
     namespace details {
         using next_f = std::function<Token()>;
         using restore_f = std::function<void(Token&&)>;

@@ -1,10 +1,10 @@
 #ifndef MEP_VISITOR_H
 #define MEP_VISITOR_H
 
-namespace mep {
+namespace aep {
     class Visitor {
 
     };
-} // namespace mep
+} // namespace aep
 
 #endif // !MEP_VISITOR_H

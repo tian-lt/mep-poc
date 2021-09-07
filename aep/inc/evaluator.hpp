@@ -8,7 +8,7 @@
 #include <vector>
 #include "lexer.hpp"
 
-namespace mep {
+namespace aep {
     struct EvaluationError : public std::runtime_error {
         EvaluationError() noexcept : std::runtime_error("failed to evaluate an ast node.") {}
         explicit EvaluationError(const std::string& msg) noexcept : std::runtime_error(msg) {}
@@ -398,6 +398,6 @@ namespace mep {
     inline double token_to_double_converter(const Token& t) {
         return std::stod(std::get<std::string>(t.payload));
     }
-} // namespace mep
+} // namespace aep
 
 #endif // !MEP_VISITOR_H

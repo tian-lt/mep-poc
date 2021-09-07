@@ -1,10 +1,32 @@
-# Mathematical Expression Parser - PoC
-A hand-written recursive-descent parser that parses simple mathematical expressions which are usually used by scientific calculator.
+# Arithmetic Expressions Parser - PoC
+A hand-written recursive-descent parser that parses simple arithmetic expressions which are usually used by scientific calculator.
 This is a PoC(proof of concept) codebase. Not ready for production usage.
 
-## MEP Expression Specification
+## Build AEP
 
-MEP Expression is a [context-free language]([Context-free language - Wikipedia](https://en.wikipedia.org/wiki/Context-free_language)) (CFL). 
+### Prerequisites
+
+Before starting to build the code base, it's required to make sure your dev-environment has [vcpkg][1] installed and below listed package(s) is(are) ready as well.
+
+Note the default triplet that `make.ps1` is using is `x64-windows`.
+
+- gtest
+
+### Steps to build source code
+
+1. Clone this repository into a local directory. Let's say it's `C:\users\happy\aep`.
+1. `cd` to the local directory. In this example: `C: && cd C:\users\happy\aep`.
+1. Run `make.ps1`to generate a build folder for development works. 
+   1. Note that the first run requires a path to [vcpkg][1]'s root folder. For example: `make.ps1 -VcpkgRoot='C:\users\happy\vcpkg'`
+1. `cd` to the build folder. In this example: `cd .\build`.
+1. Run `cmake --build . -j8` to build the source code into native binaries.
+1. Run `ctest . -j16` to test the code base.
+
+
+
+## AEP Expression Specification
+
+AEP Expression is a [context-free language]([Context-free language - Wikipedia](https://en.wikipedia.org/wiki/Context-free_language)) (CFL). 
 
 Operators
 
@@ -30,12 +52,12 @@ Operator precedence
 | 2          | **+** *(unary)*, **-** *(unary)* | Left-to-right |             |
 | 3 | **^** | Left-to-right | |
 | 4         | **!**, **%** | Left-to-right |             |
-| 5 | **\***, **/**, **mod** | Left-to-right | |
+| 5 | **\***, **/** | Left-to-right | |
 | 6 | **+** *(binary)*, **-** *(binary)* | Left-to-right | |
 
 
 
-### Human Friendly BNF Grammar
+### AEP Grammar (*in BNF*)
 
 ```BNF
 <expression> ::= <addition>
@@ -112,51 +134,12 @@ multiplication_sign_omitted ::=
                              | <empty>
 ```
 
-### Verifies that above grammar is LL(1) grammar *(out-of-date)*
-
-| FIRST(X)                             | Reduction                                                    | Results                        |
-| ------------------------------------ | ------------------------------------------------------------ | ------------------------------ |
-| expression                           | FIRST(addition)  ∪ FIRST(subtraction) ∪ FIRST(factor)<br/>=FIRST(term) ∪ FIRST(factor) | {"(", "+", "-", *Id*, *Digit*} |
-| addition                             | FIRST(term)                                                  | {"(", "+", "-", *Id*, *Digit*} |
-| subtraction                          | FIRST(term)                                                  | {"(", "+", "-", *Id*, *Digit*} |
-| continued_addition_or_subtraction    |                                                              | {"+", "-", ε}                  |
-| term                                 | FIRST(Multiplication) ∪ FIRST(Division) ∪ FIRST(factor)<br/>= FIRST(factor)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
-| continued_multiplication_or_division |                                                              | {"\*", "/", ε}                 |
-| factor                               | FIRST(postfix_unary_expression) ∪ FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
-| postfix_unary_expression             | FIRST(exponentiation) ∪ FIRST(atom)<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
-| exponentiation                       | FIRST(atom)                                                  | {"(", "+", "-", *Id*, *Digit*} |
-| atom                                 | FIRST(parenthesized) ∪ FIRST(prefix_unary_expression) ∪ FIRST(function) ∪ FIRST(number)<br/>= {"("} ∪ {"+", "-"} ∪ {*Id*} ∪ {*Digit*}<br/>= {"(", "+", "-", *Id*, *Digit*} | {"(", "+", "-", *Id*, *Digit*} |
-| parenthesized                        |                                                              | {"("}                          |
-| prefix_unary_expression              |                                                              | {"+", "-"}                     |
-| function                             |                                                              | {Id}                           |
-| number                               |                                                              | {Digit}                        |
-| continued_parameter_list             |                                                              | {","}                          |
-| postfix_unary_operator               |                                                              | {"!", "%"}                     |
 
 
 
-| FOLLOW(X)                            |                                                              |                                                    |
-| ------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- |
-| expression                           | {")"} ∪ FIRST(continued_parameter_list)                      | {")", ",",$}                                       |
-| addition                             | FOLLOW(expression)                                           | {")", ",", $}                                      |
-| subtraction                          | FOLLOW(expression)                                           | {")", ",", $}                                      |
-| continued_addition_or_subtraction    | FOLLOW(addition) ∪ FOLLOW(subtraction) ∪ FOLLOW(term)<br/>= {")", ","} ∪ FOLLOW(term) |                                                    |
-| term                                 | {"+", "-"} ∪ FIRST(continued_addition_or_subtraction) ∪ FOLLOW(addition) ∪ FOLLOW(subtraction)<br/>={"+", "-"} ∪ {"+", "-", ε} ∪ {")", ",",$} | {")", ",","+", "-", $, ε}                          |
-| multiplication                       | FOLLOW(term)                                                 | {")", ",","+", "-", $, ε}                          |
-| division                             | FOLLOW(term)                                                 | {")", ",","+", "-", $, ε}                          |
-| continued_multiplication_or_division | FOLLOW(factor) ∪ FOLLOW(multiplication) ∪ FOLLOW(division)<br/>=FOLLOW(factor) ∪ {")", ",","+", "-", $, ε} |                                                    |
-| factor                               | {"\*", "/"} ∪ FIRST(continued_multiplication_or_division) ∪ FOLLOW(expression) ∪ FOLLOW(term) ∪ FOLLOW(multiplication) ∪ FOLLOW(division) ∪ FOLLOW(continued_multiplication_or_division)<br/>={"\*", "/"} ∪ {"\*", "/", ε} ∪ {")", ",",$} ∪ {")", ",","+", "-", $, ε} ∪ {")", ",","+", "-", $, ε} | {"\*", "/", ")", ",","+", "-", $, ε}               |
-| postfix_unary_expression             | FOLLOW(factor)                                               | {"\*", "/", ")", ",","+", "-", $, ε}               |
-| exponentiation                       | FIRST(postfix_unary_operator) ∪ FOLLOW(factor)               | {"\*", "/", ")", ",","+", "-", "!", "%", $, ε}     |
-| postfix_unary_operator               | FOLLOW(postfix_unary_expression)                             | {"\*", "/", ")", ",","+", "-", $, ε}               |
-| atom                                 | {"^"} ∪ FOLLOW(factor) ∪ FIRST(postfix_unary_expression) ∪ FOLLOW(exponentiation) ∪ FOLLOW(prefix_unary_expression) <br/>={"^"} ∪ FOLLOW(exponentiation) | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
-| parenthesized                        | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
-| prefix_unary_expression              | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
-| function                             | FOLLOW(atom)                                                 | {"^","\*", "/", ")", ",","+", "-", "!", "%", $, ε} |
-| parameter_list                       |                                                              | {")"}                                              |
-| continued_parameter_list             | FOLLOW(parameter_list) ∪ FOLLOW(expression)                  | {")", ",",$}                                       |
 
 
 
-### 
 
+
+[1]: https://github.com/microsoft/vcpkg

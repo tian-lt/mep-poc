@@ -2,63 +2,63 @@
 #include "lexer.hpp"
 
 TEST(CommonLexerTests, EatOperators) {
-    mep::TokenStream ts("+-*/^%!mod=");
+    aep::TokenStream ts("+-*/^%!mod=");
     auto t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Plus);
+    EXPECT_EQ(t.token_type, aep::TokenType::Plus);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Minus);
+    EXPECT_EQ(t.token_type, aep::TokenType::Minus);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Mult);
+    EXPECT_EQ(t.token_type, aep::TokenType::Mult);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Divide);
+    EXPECT_EQ(t.token_type, aep::TokenType::Divide);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Caret);
+    EXPECT_EQ(t.token_type, aep::TokenType::Caret);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Percent);
+    EXPECT_EQ(t.token_type, aep::TokenType::Percent);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Factorial);
+    EXPECT_EQ(t.token_type, aep::TokenType::Factorial);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Mod);
+    EXPECT_EQ(t.token_type, aep::TokenType::Mod);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Equals);
+    EXPECT_EQ(t.token_type, aep::TokenType::Equals);
 }
 TEST(CommonLexerTests, EatOthers) {
-    mep::TokenStream ts("()Hello hello2");
+    aep::TokenStream ts("()Hello hello2");
     auto t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::LeftParenthesis);
+    EXPECT_EQ(t.token_type, aep::TokenType::LeftParenthesis);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::RightParenthesis);
+    EXPECT_EQ(t.token_type, aep::TokenType::RightParenthesis);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Identifier);
+    EXPECT_EQ(t.token_type, aep::TokenType::Identifier);
     EXPECT_EQ(std::get<std::string>(t.payload), "Hello");
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Identifier);
+    EXPECT_EQ(t.token_type, aep::TokenType::Identifier);
     EXPECT_EQ(std::get<std::string>(t.payload), "hello2");
 }
 TEST(CommonLexerTests, EatWhitespaces) {
-    mep::TokenStream ts("     1+1 = sqrt  (      4   \t)    ");
+    aep::TokenStream ts("     1+1 = sqrt  (      4   \t)    ");
     auto t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::DecimalInteger);
+    EXPECT_EQ(t.token_type, aep::TokenType::DecimalInteger);
     EXPECT_EQ(std::get<std::string>(t.payload), "1");
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Plus);
+    EXPECT_EQ(t.token_type, aep::TokenType::Plus);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::DecimalInteger);
+    EXPECT_EQ(t.token_type, aep::TokenType::DecimalInteger);
     EXPECT_EQ(std::get<std::string>(t.payload), "1");
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Equals);
+    EXPECT_EQ(t.token_type, aep::TokenType::Equals);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::Identifier);
+    EXPECT_EQ(t.token_type, aep::TokenType::Identifier);
     EXPECT_EQ(std::get<std::string>(t.payload), "sqrt");
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::LeftParenthesis);
+    EXPECT_EQ(t.token_type, aep::TokenType::LeftParenthesis);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::DecimalInteger);
+    EXPECT_EQ(t.token_type, aep::TokenType::DecimalInteger);
     EXPECT_EQ(std::get<std::string>(t.payload), "4");
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::RightParenthesis);
+    EXPECT_EQ(t.token_type, aep::TokenType::RightParenthesis);
     t = ts.next();
-    EXPECT_EQ(t.token_type, mep::TokenType::EOE);
+    EXPECT_EQ(t.token_type, aep::TokenType::EOE);
 }
 
 

@@ -4,5 +4,5 @@ add_executable(console
     main.cpp
 )
 
-target_link_libraries(console PRIVATE meppoc::mep)
+target_link_libraries(console PRIVATE aeppoc::aep)
 

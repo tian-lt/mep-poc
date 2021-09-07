@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include "lexer.hpp"
 
-namespace mep::details {
+namespace aep::details {
     const std::unordered_map<char, TokenType> _ch_to_tokentype{
         {'+', TokenType::Plus},
         {'-', TokenType::Minus},
