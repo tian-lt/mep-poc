@@ -150,14 +150,6 @@ namespace mep {
         std::unique_ptr<ast::ContinuedParameterList> continued_parameter_list(const next_f& next, const restore_f& restore, kac_t& kac);
 
         constexpr bool is_num_token(const Token& t);
-        bool is_binary_operator_token(const Token& t);
-        bool is_identifier_token(const Token& t);
-        bool is_pre_unary_token(const Token& t);
-        bool is_post_unary_token(const Token& t);
-        bool is_non_token(const Token& t);
-        bool is_eoe_token(const Token& t);
-        bool is_leftparen_token(const Token& t);
-        bool is_rightparen_token(const Token& t);
     }
 
     struct ParserError : public std::runtime_error {
