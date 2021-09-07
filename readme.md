@@ -26,7 +26,7 @@ Note the default triplet that `make.ps1` is using is `x64-windows`.
 
 ## AEP Expression Specification
 
-AEP Expression is a [context-free language]([Context-free language - Wikipedia](https://en.wikipedia.org/wiki/Context-free_language)) (CFL). 
+AEP Expression is a [context-free language](https://en.wikipedia.org/wiki/Context-free_language) (CFL). 
 
 Operators
 
