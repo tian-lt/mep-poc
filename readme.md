@@ -136,7 +136,17 @@ multiplication_sign_omitted ::=
 
 
 
+## Codebase paths
 
+1. Primary Codebase: `./aep`
+
+1. Unit Tests and Integration Tests: `./tests`
+
+1. Demo console application: `./console`
+
+1. Experimental tests and feature explorations: `/experimental`
+
+   
 
 
 
