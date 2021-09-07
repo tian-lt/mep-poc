@@ -6,6 +6,7 @@ add_executable(meptest
     common_lexer_tests.cpp
     common_parser_tests.cpp
     decimal_lexer_tests.cpp
+    evaluator_insane_tests.cpp
 )
 
 target_link_libraries(meptest PRIVATE GTest::gtest GTest::gtest_main meppoc::mep)

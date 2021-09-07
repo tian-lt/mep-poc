@@ -46,10 +46,6 @@ TEST_F(CommonEvaluatorTests, Expression) {
     auto expr = mep::Parser<mep::RadixDecimal>::parse(mep::TokenStream<mep::RadixDecimal>("1.0 + 2.0 - 0.5"));
     auto val = evaluator->eval_expression(*expr);
     EXPECT_DOUBLE_EQ(val, 2.5);
-
-    auto expr2 = mep::Parser<mep::RadixDecimal>::parse(mep::TokenStream<mep::RadixDecimal>("(43 - -77)/37^-94 + (-66*67)^(-24*49)"));
-    auto val2 = evaluator->eval_expression(*expr2);
-    EXPECT_DOUBLE_EQ(val2, 3.0913153354117578984696634618272e+149);
 }
 
 TEST_F(CommonEvaluatorTests, Addition) {
