@@ -5,7 +5,6 @@ set(MEP_HEADER_FILES
     inc/evaluator.hpp
     inc/lexer.hpp
     inc/parser.hpp
-    inc/visitor.hpp
 )
 
 set(MEP_SOURCE_FILES

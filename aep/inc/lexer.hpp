@@ -1,5 +1,5 @@
-#ifndef MEP_LEXER_H
-#define MEP_LEXER_H
+#ifndef AEP_LEXER_H
+#define AEP_LEXER_H
 
 #include <functional>
 #include <memory>
@@ -142,4 +142,4 @@ namespace aep {
     }
 }
 
-#endif // MEP_LEXER_H
+#endif // AEP_LEXER_H

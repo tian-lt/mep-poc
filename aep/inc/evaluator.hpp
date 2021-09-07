@@ -1,5 +1,5 @@
-#ifndef MEP_VISITOR_H
-#define MEP_VISITOR_H
+#ifndef AEP_EVALUATOR_H
+#define AEP_EVALUATOR_H
 
 #include <functional>
 #include <stdexcept>
@@ -400,4 +400,4 @@ namespace aep {
     }
 } // namespace aep
 
-#endif // !MEP_VISITOR_H
+#endif // !AEP_EVALUATOR_H

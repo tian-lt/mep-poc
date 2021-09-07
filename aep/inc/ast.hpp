@@ -1,5 +1,5 @@
-#ifndef MEP_AST_H
-#define MEP_AST_H
+#ifndef AEP_AST_H
+#define AEP_AST_H
 
 #include <memory>
 #include <optional>
@@ -138,4 +138,4 @@ namespace aep::ast {
     };
 } // namespace aep::ast
 
-#endif // !MEP_AST_H
+#endif // !AEP_AST_H
