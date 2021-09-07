@@ -174,7 +174,7 @@ namespace mep::details {
         return _mk_uptr(ast::Addition{
             .lhs = std::move(lhs),
             .rhs = std::move(rhs),
-            .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
+            .continued = std::move(continued)});
     }
 
     /* **************************************************************
@@ -198,7 +198,7 @@ namespace mep::details {
         return _mk_uptr(ast::Subtraction{
             .lhs = std::move(lhs),
             .rhs = std::move(rhs),
-            .continued = _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt });
+            .continued = std::move(continued)});
     }
 
     /* **************************************************************
@@ -213,7 +213,7 @@ namespace mep::details {
             _expect(trm);
             auto continued = continued_addition_or_subtraction(next, restore, kac);
             return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
-                .add_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
+                .add_continued = _mk_otpl(std::move(trm), std::move(continued)),
                 .is_empty = false });
         }
         else if (_choose(lat, TokenType::Minus)) { // "-"
@@ -221,7 +221,7 @@ namespace mep::details {
             _expect(trm);
             auto continued = continued_addition_or_subtraction(next, restore, kac);
             return _mk_uptr(ast::ContinuedAdditionOrSubtraction{
-                .sub_continued = _mk_otpl(std::move(trm), _choose(continued) ? _mk_opt(std::move(continued)) : std::nullopt),
+                .sub_continued = _mk_otpl(std::move(trm), std::move(continued)),
                 .is_empty = false });
         }
         else { // empty

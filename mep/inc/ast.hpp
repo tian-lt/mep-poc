@@ -48,16 +48,16 @@ namespace mep::ast {
     struct Addition {
         uptr<Term> lhs;
         uptr<Term> rhs;
-        ouptr<ContinuedAdditionOrSubtraction> continued;
+        uptr<ContinuedAdditionOrSubtraction> continued;
     };
     struct Subtraction {
         uptr<Term> lhs;
         uptr<Term> rhs;
-        ouptr<ContinuedAdditionOrSubtraction> continued;
+        uptr<ContinuedAdditionOrSubtraction> continued;
     };
     struct ContinuedAdditionOrSubtraction {
-        otpl<uptr<Term>, ouptr<ContinuedAdditionOrSubtraction>> add_continued;
-        otpl<uptr<Term>, ouptr<ContinuedAdditionOrSubtraction>> sub_continued;
+        otpl<uptr<Term>, uptr<ContinuedAdditionOrSubtraction>> add_continued;
+        otpl<uptr<Term>, uptr<ContinuedAdditionOrSubtraction>> sub_continued;
         bool is_empty;
     };
     struct Term {
@@ -77,8 +77,8 @@ namespace mep::ast {
         uptr<ContinuedMultiplicationOrDivision> continued;
     };
     struct MultiplicationSignOmitted {
-        otpl<uptr<Factor>, uptr<Parenthesized>, ouptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;
-        otpl<uptr<Factor>, uptr<Function>, ouptr<ContinuedMultiplicationOrDivision>> factor_function;
+        otpl<uptr<Factor>, uptr<Parenthesized>, uptr<ContinuedMultiplicationOrDivision>> factor_parenthesized;
+        otpl<uptr<Factor>, uptr<Function>, uptr<ContinuedMultiplicationOrDivision>> factor_function;
     };
     struct ContinuedMultiplicationOrDivision {
         otpl<uptr<Factor>, uptr<ContinuedMultiplicationOrDivision>> mul_continued; // Mul

@@ -52,6 +52,14 @@ namespace mep {
             constexpr negative_t(std::function<_Tv(const _Tv& operand)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& operand)> invoke;
         };
+        struct add_t{
+            constexpr add_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
+        };
+        struct sub_t{
+            constexpr sub_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
+            const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
+        };
         struct mul_t{
             constexpr mul_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
@@ -60,9 +68,6 @@ namespace mep {
             constexpr div_t(std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& lhs, const _Tv& rhs)> invoke;
         };
-        //using add_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        //using sub_t = std::function<_Tv(const _Tv& lhs, const _Tv& rhs)>;
-        //using pow_t = std::function<_Tv(const _Tv& base, const _Tv& exponent)>;
         struct pow_t {
             constexpr pow_t(std::function<_Tv(const _Tv& base, const _Tv& exponent)> f) : invoke(f) {}
             const std::function<_Tv(const _Tv& base, const _Tv& exponent)> invoke;
@@ -86,6 +91,8 @@ namespace mep {
         typename RequiredIntTypes<_Tv>::number_t,
         typename RequiredIntTypes<_Tv>::positive_t,
         typename RequiredIntTypes<_Tv>::negative_t,
+        typename RequiredIntTypes<_Tv>::add_t,
+        typename RequiredIntTypes<_Tv>::sub_t,
         typename RequiredIntTypes<_Tv>::mul_t,
         typename RequiredIntTypes<_Tv>::div_t,
         typename RequiredIntTypes<_Tv>::pow_t,
@@ -105,6 +112,10 @@ namespace mep {
         Evaluator(required_int_t<_Tv>&& ints)
             : _ints(std::move(ints)) {}
         _Tv eval_expression(const ast::Expression& expression) const;
+        _Tv eval_addition(const ast::Addition& addition) const;
+        _Tv eval_subtraction(const ast::Subtraction& subtraction) const;
+        _Tv eval_continued_addition_or_subtraction(const _Tv& lhs, const ast::ContinuedAdditionOrSubtraction& rhs) const;
+        _Tv eval_term(const ast::Term& term) const;
         _Tv eval_multiplication(const ast::Multiplication& multiplication) const;
         _Tv eval_division(const ast::Division& division) const;
         _Tv eval_multiplication_sign_omitted(const ast::MultiplicationSignOmitted& mso) const;
@@ -124,7 +135,76 @@ namespace mep {
 
     template<class _Tv>
     inline _Tv Evaluator<_Tv>::eval_expression(const ast::Expression& expression) const {
-        throw 0;
+        if (expression.addition.has_value()) {
+            return eval_addition(*expression.addition.value());
+        }
+        else if (expression.subtraction.has_value()) {
+            return eval_subtraction(*expression.subtraction.value());
+        }
+        else if (expression.term.has_value()) {
+            return eval_term(*expression.term.value());
+        }
+        throw EvaluationError();
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_addition(const ast::Addition& addition) const {
+        auto result = _ints.interprets<RequiredIntTypes<_Tv>::add_t>().invoke(
+            eval_term(*addition.lhs),
+            eval_term(*addition.rhs));
+        if (!addition.continued->is_empty) {
+            return eval_continued_addition_or_subtraction(result, *addition.continued);
+        }
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_subtraction(const ast::Subtraction& subtraction) const {
+        auto result = _ints.interprets<RequiredIntTypes<_Tv>::sub_t>().invoke(
+            eval_term(*subtraction.lhs),
+            eval_term(*subtraction.rhs));
+        if (!subtraction.continued->is_empty) {
+            return eval_continued_addition_or_subtraction(result, *subtraction.continued);
+        }
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_continued_addition_or_subtraction(const _Tv& lhs, const ast::ContinuedAdditionOrSubtraction& rhs) const {
+        auto result = lhs;
+        const ast::ContinuedAdditionOrSubtraction* next = &rhs;
+        while (next && !next->is_empty) {
+            if (next->add_continued.has_value()) {
+                result = _ints.interprets<RequiredIntTypes<_Tv>::add_t>().invoke(
+                    result,
+                    eval_term(*std::get<std::unique_ptr<ast::Term>>(rhs.add_continued.value())));
+                next = std::get<std::unique_ptr<ast::ContinuedAdditionOrSubtraction>>(next->add_continued.value()).get();
+            }
+            else if (next->sub_continued.has_value()) {
+                result = _ints.interprets<RequiredIntTypes<_Tv>::sub_t>().invoke(
+                    result,
+                    eval_term(*std::get<std::unique_ptr<ast::Term>>(rhs.sub_continued.value())));
+                next = std::get<std::unique_ptr<ast::ContinuedAdditionOrSubtraction>>(next->sub_continued.value()).get();
+            }
+            else {
+                throw EvaluationError();
+            }
+        }
+        return result;
+    }
+
+    template<class _Tv>
+    inline _Tv Evaluator<_Tv>::eval_term(const ast::Term& term) const {
+        if (term.factor.has_value()) {
+            return eval_factor(*term.factor.value());
+        }
+        else if (term.multiplication.has_value()) {
+            return eval_multiplication(*term.multiplication.value());
+        }
+        else if (term.division.has_value()) {
+            return eval_division(*term.division.value());
+        }
+        throw EvaluationError();
     }
 
     template<class _Tv>
@@ -133,7 +213,7 @@ namespace mep {
             auto result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(
                 eval_factor(*multiplication.lhs.value()),
                 eval_factor(*multiplication.rhs.value()));
-            return eval_continued_multiplication_or_division(result, *multiplication.continued);
+            return eval_continued_multiplication_or_division(result, *multiplication.continued.value());
         }
         else if (multiplication.omitted.has_value()) {
             return eval_multiplication_sign_omitted(*multiplication.omitted.value());
@@ -144,10 +224,16 @@ namespace mep {
     template<class _Tv>
     _Tv Evaluator<_Tv>::eval_multiplication_sign_omitted(const ast::MultiplicationSignOmitted& mso) const{
         if (mso.factor_parenthesized.has_value()) {
-
+            auto lhs = eval_factor(*std::get<std::unique_ptr<ast::Factor>>(mso.factor_parenthesized.value()));
+            auto rhs = eval_parenthesized(*std::get<std::unique_ptr<ast::Parenthesized>>(mso.factor_parenthesized.value()));
+            auto result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(lhs, rhs);
+            return eval_continued_multiplication_or_division(result, *std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(mso.factor_parenthesized.value()));
         }
         else if (mso.factor_function.has_value()) {
-
+            auto lhs = eval_factor(*std::get<std::unique_ptr<ast::Factor>>(mso.factor_function.value()));
+            auto rhs = eval_function(*std::get<std::unique_ptr<ast::Function>>(mso.factor_function.value()));
+            auto result = _ints.interprets<RequiredIntTypes<_Tv>::mul_t>().invoke(lhs, rhs);
+            return eval_continued_multiplication_or_division(result, *std::get<std::unique_ptr<ast::ContinuedMultiplicationOrDivision>>(mso.factor_parenthesized.value()));
         }
         throw EvaluationError();
     }
@@ -236,12 +322,13 @@ namespace mep {
             return eval_number(atom.number.value());
         }
         else if (atom.parenthesized.has_value()) {
-            return eval_parenthesized(*(atom.parenthesized.value()));
+            return eval_parenthesized(*atom.parenthesized.value());
         }
         else if (atom.function.has_value()) {
-            return eval_function(*(atom.function.value()));
+            return eval_function(*atom.function.value());
         }
         else if (atom.prefix_unary_expression.has_value()) {
+            return eval_prefix_unary_expression(*atom.prefix_unary_expression.value());
         }
         throw EvaluationError();
     }
@@ -294,9 +381,9 @@ namespace mep {
             result.emplace_back(std::move(vexpr));
             next = params.continued.get();
             while (!next->is_empty) {
-                vexpr = eval_expression(*(params.expression));
+                vexpr = eval_expression(*(next->expression));
                 result.emplace_back(std::move(vexpr));
-                next = params.continued.get();
+                next = next->continued.get();
             }
         }
         return result;

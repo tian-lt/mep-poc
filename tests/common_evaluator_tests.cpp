@@ -28,6 +28,8 @@ struct CommonEvaluatorTests : ::testing::Test {
             mep::RequiredIntTypes<double>::number_t(mep::token_to_double_converter),
             mep::RequiredIntTypes<double>::positive_t([](const double& operand){ return operand; }),
             mep::RequiredIntTypes<double>::negative_t([](const double& operand){ return -operand; }),
+            mep::RequiredIntTypes<double>::add_t([](const double& lhs, const double& rhs) { return lhs + rhs; }),
+            mep::RequiredIntTypes<double>::sub_t([](const double& lhs, const double& rhs) { return lhs - rhs; }),
             mep::RequiredIntTypes<double>::mul_t([](const double& lhs, const double& rhs) { return lhs * rhs; }),
             mep::RequiredIntTypes<double>::div_t([](const double& lhs, const double& rhs) { return lhs / rhs; }),
             mep::RequiredIntTypes<double>::pow_t([](const double& base, const double& exp){ return std::pow(base, exp); }),
@@ -40,7 +42,56 @@ struct CommonEvaluatorTests : ::testing::Test {
     std::unique_ptr<mep::Evaluator<double>> evaluator;
 };
 
+TEST_F(CommonEvaluatorTests, Expression) {
+    auto expr = mep::Parser<mep::RadixDecimal>::parse(mep::TokenStream<mep::RadixDecimal>("1.0 + 2.0 - 0.5"));
+    auto val = evaluator->eval_expression(*expr);
+    EXPECT_DOUBLE_EQ(val, 2.5);
+
+    auto expr2 = mep::Parser<mep::RadixDecimal>::parse(mep::TokenStream<mep::RadixDecimal>("(43 - -77)/37^-94 + (-66*67)^(-24*49)"));
+    auto val2 = evaluator->eval_expression(*expr2);
+    EXPECT_DOUBLE_EQ(val2, 3.0913153354117578984696634618272e+149);
+}
+
 TEST_F(CommonEvaluatorTests, Addition) {
+    auto add = MockParser<mep::ast::Addition, mep::RadixDecimal, decltype(mep::details::addition)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1.1 + 2.2"), mep::details::addition);
+    auto val = evaluator->eval_addition(*add);
+    EXPECT_DOUBLE_EQ(val, 3.3);
+
+    auto add2 = MockParser<mep::ast::Addition, mep::RadixDecimal, decltype(mep::details::addition)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1.1 + 2.2 + 3.3"), mep::details::addition);
+    auto val2 = evaluator->eval_addition(*add2);
+    EXPECT_DOUBLE_EQ(val2, 6.6);
+}
+
+TEST_F(CommonEvaluatorTests, Subtraction) {
+    auto sub = MockParser<mep::ast::Subtraction, mep::RadixDecimal, decltype(mep::details::subtraction)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("10.0 - 9.5"), mep::details::subtraction);
+    auto val = evaluator->eval_subtraction(*sub);
+    EXPECT_DOUBLE_EQ(val, 0.5);
+
+    auto sub2 = MockParser<mep::ast::Subtraction, mep::RadixDecimal, decltype(mep::details::subtraction)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("10.0 - 9.5 - 0.1"), mep::details::subtraction);
+    auto val2 = evaluator->eval_subtraction(*sub2);
+    EXPECT_DOUBLE_EQ(val2, 0.4);
+}
+
+TEST_F(CommonEvaluatorTests, Multiplication) {
+    auto mock_parsing =
+        [](const mep::details::next_f& next, const mep::details::restore_f& restore, mep::details::kac_t& kac) -> std::unique_ptr<mep::ast::Multiplication> {
+        auto factor = mep::details::factor(next, restore, kac);
+        kac.push(std::move(factor));
+        return mep::details::multiplication(next, restore, kac);
+    };
+    auto mul = MockParser<mep::ast::Multiplication, mep::RadixDecimal, decltype(mock_parsing)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1.1*2.2"), mock_parsing);
+    auto val = evaluator->eval_multiplication(*mul);
+    EXPECT_DOUBLE_EQ(val, 2.42);
+
+    auto mul2 = MockParser<mep::ast::Multiplication, mep::RadixDecimal, decltype(mock_parsing)>::parse_proxy(
+        mep::TokenStream<mep::RadixDecimal>("1.1*2.2*3.33"), mock_parsing);
+    auto val2 = evaluator->eval_multiplication(*mul2);
+    EXPECT_DOUBLE_EQ(val2, 8.0586);
 }
 
 TEST_F(CommonEvaluatorTests, Division) {

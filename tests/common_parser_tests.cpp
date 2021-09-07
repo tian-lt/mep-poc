@@ -47,8 +47,8 @@ TEST(CommonParserTests, Addition) {
         mep::TokenStream<mep::RadixDecimal>("1+2+3"), mep::details::addition);
     EXPECT_EQ(std::get<std::string>(addition2->lhs->factor.value()->atom.value()->number.value().payload), "1");
     EXPECT_EQ(std::get<std::string>(addition2->rhs->factor.value()->atom.value()->number.value().payload), "2");
-    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(addition2->continued.value()->add_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
-    EXPECT_TRUE(std::get<std::optional<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>>(addition2->continued.value()->add_continued.value()).value()->is_empty);
+    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(addition2->continued->add_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
+    EXPECT_TRUE(std::get<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>(addition2->continued->add_continued.value())->is_empty);
 }
 
 TEST(CommonParserTests, Subtraction) {
@@ -61,8 +61,8 @@ TEST(CommonParserTests, Subtraction) {
         mep::TokenStream<mep::RadixDecimal>("1-2-3"), mep::details::subtraction);
     EXPECT_EQ(std::get<std::string>(subtraction2->lhs->factor.value()->atom.value()->number.value().payload), "1");
     EXPECT_EQ(std::get<std::string>(subtraction2->rhs->factor.value()->atom.value()->number.value().payload), "2");
-    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(subtraction2->continued.value()->sub_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
-    EXPECT_TRUE(std::get<std::optional<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>>(subtraction2->continued.value()->sub_continued.value()).value()->is_empty);
+    EXPECT_EQ(std::get<std::string>(std::get<std::unique_ptr<mep::ast::Term>>(subtraction2->continued->sub_continued.value())->factor.value()->atom.value()->number.value().payload), "3");
+    EXPECT_TRUE(std::get<std::unique_ptr<mep::ast::ContinuedAdditionOrSubtraction>>(subtraction2->continued->sub_continued.value())->is_empty);
 }
 
 TEST(CommonParserTests, Term) {
